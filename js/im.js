@@ -182,11 +182,7 @@ function aesDecryptText(data)
 }
 
 
-//var imConnection = new WebSocket('ws://127.0.0.1:9090/chat');
-//var imConnection = new WebSocket('ws://192.168.0.12:9090/chat');       
-//var imConnectionUrl = 'ws://im.haitou.cc:9090/chat';
-//var imConnectionUrl = 'ws://127.0.0.1:9090/chat';
-var imConnectionUrl = 'ws://xiaominfc.haitou.cc:9090/chat';
+var imConnectionUrl = 'ws://192.168.0.114:9090/chat';
 
 var imConnection = {};
 imConnection.logined = false;
