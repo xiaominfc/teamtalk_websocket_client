@@ -225,6 +225,7 @@ function wsClose (event) {
 	if(!window.navigator.onLine)
 	{
 		imConnection.clientState = UserStatType.USER_STATUS_OFFLINE;
+		initConnection();
 	}else if(imConnection.logined) {
 		initConnection();
 	}
