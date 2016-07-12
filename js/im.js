@@ -138,16 +138,6 @@ function aesEncryptText(text)
 		var iv  = CryptoJS.enc.Utf8.parse('12345678901234567890123456789012');
 		var encrypted = CryptoJS.AES.encrypt(data, key, {iv:iv , mode: CryptoJS.mode.ECB, padding: CryptoJS.pad.NoPadding});
 		text = encrypted.ciphertext.toString(CryptoJS.enc.Base64);
-		// console.log(text);
-		// // var key = CryptoJS.enc.Utf8.parse('12345678901234567890123456789012');
-		// // var iv  = CryptoJS.enc.Utf8.parse('12345678901234567890123456789012');
-		// text = CryptoJS.AES.decrypt(text, key, {iv:iv, mode: CryptoJS.mode.ECB,  padding: CryptoJS.pad.ZeroPadding});
-		// if(text.words[text.words.length - 2] == 0) {
-		// 	text.words[text.words.length - 1] = 0;
- 		// 	}
-		// console.log(text);
-		// //text.words[47] = 0;
-		// text = CryptoJS.enc.Utf8.stringify(text);
 	}catch(err)
 	{
 		text = '';
@@ -159,7 +149,6 @@ function aesEncryptText(text)
 function aesDecryptText(data)
 {
 	var typeString =  typeof data;
-	//console.log(typeString);
 	if(typeof data != 'string') {
 		var msg_data = data.buffer.slice(data.offset, data.limit);
 		var base64String = btoa(String.fromCharCode.apply(null, new Uint8Array(msg_data)));
