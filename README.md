@@ -7,7 +7,7 @@
 修改js/im.js 
 var imConnectionUrl = 'ws://192.168.0.114:9090/chat';
 改成你配置的websocket_server的ip跟port
-
+放到webserver(apache nginx)的工作目录下
 然后访问 index.html 就可以测试了
 ```
 
