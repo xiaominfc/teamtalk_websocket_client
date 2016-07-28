@@ -151,7 +151,7 @@ function aesDecryptText(data)
 	var typeString =  typeof data;
 	if(typeof data != 'string') {
 		var msg_data = data.buffer.slice(data.offset, data.limit);
-		var base64String = btoa(String.fromCharCode.apply(null, new Uint8Array(msg_data)));
+		var base64String = window.btoa(String.fromCharCode.apply(null, new Uint8Array(msg_data)));
 		data = Base64.decode(base64String);
 	}
 	var text = '';
@@ -159,8 +159,12 @@ function aesDecryptText(data)
 		var key = CryptoJS.enc.Utf8.parse('12345678901234567890123456789012');
 		var iv  = CryptoJS.enc.Utf8.parse('12345678901234567890123456789012');
 		text = CryptoJS.AES.decrypt(data, key, {iv:iv, mode: CryptoJS.mode.ECB,  padding: CryptoJS.pad.NoPadding});
+		console.log(text);
 		if(text.words[text.words.length - 2] == 0) {
 			text.words[text.words.length - 1] = 0;
+ 		}else if(text.sigBytes > text.words[text.words.length - 1]){
+ 			text.words[text.words.length - 1] = 0;
+ 			//text.sigBytes = text.words[text.words.length - 1];	
  		}
 		text = CryptoJS.enc.Utf8.stringify(text);
 	}catch(err)
