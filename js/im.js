@@ -107,7 +107,12 @@ function padText(source,count) {
     		source.words.push(0);
     	}
     	source.words.push(count);		
-    }
+    }else {
+		source.words.push(0);
+		source.words.push(0);
+		source.words.push(0);
+		source.words.push(count);
+	}
     
     source.sigBytes = 4 * source.words.length;
     return source;
