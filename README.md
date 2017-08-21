@@ -11,3 +11,15 @@ var imConnectionUrl = 'ws://192.168.0.114:9090/chat';
 然后访问 index.html 就可以测试了
 ```
 
+nginx下会出现跳转异常 主要是url少了后缀 可以加个重写的规则
+```
+location / {
+    if (!-e $request_filename){
+        rewrite ^(.*)$ /$1.html last;
+        break;
+    }
+}
+
+
+```
+
