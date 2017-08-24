@@ -4,9 +4,9 @@
 弱弱的参考https://github.com/xiaominfc/teamtalk_websocket_server编译出websocket_server并运行
 
 ```
-修改js/my-app.js 
-var imConnectionUrl = 'ws://192.168.0.114:9090/chat';
-改成你配置的websocket_server的ip跟port
+修改js/my-app.js  15行
+var client = new TeamTalkWebClient({wsurl:'ws://im.xiaominfc.com:9090'});
+改成你配置的websocket_server的 ip/域名 跟port
 放到webserver(apache nginx)的工作目录下
 然后访问 index.html 就可以测试了
 ```
