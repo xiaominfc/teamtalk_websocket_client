@@ -4,7 +4,7 @@
 弱弱的参考https://github.com/xiaominfc/teamtalk_websocket_server编译出websocket_server并运行
 
 ```
-修改js/im.js 
+修改js/my-app.js 
 var imConnectionUrl = 'ws://192.168.0.114:9090/chat';
 改成你配置的websocket_server的ip跟port
 放到webserver(apache nginx)的工作目录下
