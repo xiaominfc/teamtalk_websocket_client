@@ -12,9 +12,11 @@ var mainView = myApp.addView('.view-main', {
 	dynamicNavbar: true
 });
 
+var client = new TeamTalkWebClient({wsurl:'ws://im.xiaominfc.com:9090'});
+//client.connection();
 
 myApp.onPageAfterAnimation('chatmain', function (page) {
-	//console.log('pageAfterAnimation');
+	console.log('pageAfterAnimation');
 	myApp.showIndicator();
 	var key = currentSession.session_type + '_' + currentSession.session_id;
 
@@ -24,10 +26,10 @@ myApp.onPageAfterAnimation('chatmain', function (page) {
 		loadMsgForChatMain(currentSession.messages,currentSession.MessagesManager);
 	}else {
 		var content = {session_id:currentSession.session_id,session_type:currentSession.session_type,msg_id_begin:0,msg_cnt:40};
-		getMsgListApiAction(content,function(state,res1) {
-			imDb.addMessagetoDb(key,res1.msg_list);
+		client.getMsgListApiAction(content,function(state,res) {
+			imDb.addMessagetoDb(key,res.msgList);
 			myApp.hideIndicator();
-			loadMsgForChatMain(res1.msg_list,currentSession.MessagesManager)            
+			loadMsgForChatMain(res.msgList,currentSession.MessagesManager)            
 		});
 	}
 });
@@ -35,7 +37,7 @@ myApp.onPageAfterAnimation('chatmain', function (page) {
 
 myApp.onPageAfterAnimation('home', function (page) {
 	loadConcats();	
-	getUnreadMessageCnt({},function(state,res){
+	client.getUnreadMessageCnt({},function(state,res){
 		console.log(res);
 	});
 	loadRecentlySession();
@@ -43,27 +45,27 @@ myApp.onPageAfterAnimation('home', function (page) {
 
 
 
-connection.msgHandler = function(res) {
+client.msgHandler = function(newMsg) {
 	//console.log('new msg:' + JSON.stringify(res) + ' at:' + mainView.activePage.name);
-	res.user_id = res.from_user_id;
-	res.type = res.msg_type; 
-	res.session_id = res.to_session_id;   
-	var msg_session_type = (res.msg_type === MsgType.MSG_TYPE_GROUP_TEXT || res.type === MsgType.MSG_TYPE_GROUP_AUDIO)? SessionType.SESSION_TYPE_GROUP:SessionType.SESSION_TYPE_SINGLE;
-	var msg_session_key = msg_session_type + '_' + res.to_session_id;    
+	newMsg.user_id = newMsg.fromUserId;
+	newMsg.type = newMsg.msgType; 
+	newMsg.session_id = newMsg.toSessionId;   
+	var msg_session_type = (newMsg.msgType === MsgType.MSG_TYPE_GROUP_TEXT || newMsg.type === MsgType.MSG_TYPE_GROUP_AUDIO)? SessionType.SESSION_TYPE_GROUP:SessionType.SESSION_TYPE_SINGLE;
+	var msg_session_key = msgSessionType + '_' + newMsg.toSessionId;    
 
-	if(msg_session_type === SessionType.SESSION_TYPE_SINGLE && res.user_id != connection.uid) {
-		msg_session_key = msg_session_type + '_' + res.user_id; 
+	if(msg_session_type === SessionType.SESSION_TYPE_SINGLE && newMsg.userId != client.uid) {
+		msg_session_key = msg_session_type + '_' + res.userId; 
 	}
-	imDb.addMessagetoDb(msg_session_key,res);
+	imDb.addMessagetoDb(msg_session_key,newMsg);
 
 	if(mainView.activePage.name == 'chatmain') {
 		var key = currentSession.session_type + '_' + currentSession.session_id;
 		if(key === msg_session_key) {
-			loadNewMsgToChatMain(res);
+			loadNewMsgToChatMain(newMsg);
 			return;    
 		}
 	}
-	loadNotificationForNewMsg(res);
+	loadNotificationForNewMsg(newMsg);
 }
 
 
@@ -84,21 +86,21 @@ function bindDataToContactlist(){
 	for(var i in user_list){
 		var user = user_list[i];
 
-		if(parseInt(user.user_id) == connection.uid) {
+		if(parseInt(user.userId) == client.uid) {
 			continue;
 		}
-		var item = '<li class="item-content item-link user-action" value="'+ user.user_id +'">' + 
-			'<div class="item-media"><img src="'+ user.avatar_url + '" class="avatar" ></div>' +
+		var item = '<li class="item-content item-link user-action" value="'+ user.userId +'">' + 
+			'<div class="item-media"><img src="'+ user.avatarUrl + '" class="avatar" ></div>' +
 			'<div class="item-inner">' +
-			'<div class="item-title">' + user.user_nick_name +'</div>' +
+			'<div class="item-title">' + user.userNickName +'</div>' +
 			'</div></li>';
 		html = html + item;
 	}
 	$$('#contact-list').html(html);
 	$$('.user-action').on('click',function(ele){
 		var user = imDb.getUserbyId(this.value);
-		currentSession.title = user.user_nick_name;
-		currentSession.session_id = parseInt(user.user_id);
+		currentSession.title = user.userNickName;
+		currentSession.session_id = parseInt(user.userId);
 		currentSession.session_type = SessionType.SESSION_TYPE_SINGLE;
 		currentSession.current_msg_id = 0;
 		mainView.router.loadPage('chatmain');  
@@ -112,17 +114,17 @@ function bindDataToGrouplist(){
 	for(var i in group_info_list){
 		var group_info = group_info_list[i];
 		var item = '<li class="item-content item-link group-action" value="'+ i +'">' + 
-			'<div class="item-media"><img src="'+ group_info.group_avatar + '" class="avatar" ></div>' +
+			'<div class="item-media"><img src="'+ group_info.groupAvatar + '" class="avatar" ></div>' +
 			'<div class="item-inner">' +
-			'<div class="item-title">' + group_info.group_name +'</div>' +
+			'<div class="item-title">' + group_info.groupName +'</div>' +
 			'</div></li>';
 		html = html + item;
 	}
 	$$('#group-list').html(html);
 	$$('.group-action').on('click',function(ele){
 		var group_info = imDb.getAllGroupList()[this.value];
-		currentSession.title = group_info.group_name;
-		currentSession.session_id = group_info.group_id;
+		currentSession.title = group_info.groupName;
+		currentSession.session_id = group_info.groupId;
 		currentSession.session_type = SessionType.SESSION_TYPE_GROUP;
 		currentSession.current_msg_id = 0;
 		mainView.router.loadPage('chatmain');  
@@ -134,17 +136,17 @@ function loadConcats(){
 		bindDataToGrouplist();
 	}else {
 		
-		getGroupListApiAction(function(state,res){
+		client.getGroupListApiAction(function(state,res){
 			if(state) {
 				var group_version_list = [];
-				for(index in res.group_version_list) {
-					var group_version = res.group_version_list[index];
+				for(index in res.groupVersionList) {
+					var group_version = res.groupVersionList[index];
 					group_version.version = 0;
 					group_version_list.push(group_version);
 				}
 				var content = {group_version_list:group_version_list};
-				getGroupInfoApiAction(content,function(state,res1) {
-					imDb.addGroupInfoToDb(res1.group_info_list);
+				client.getGroupInfoApiAction(content,function(state,res1) {
+					imDb.addGroupInfoToDb(res1.groupInfoList);
 					bindDataToGrouplist();
 				});        
 			}
@@ -164,7 +166,7 @@ function bindSessions(autoRemove){
 			continue;
 		}
 
-		var text = session.latest_msg_data;
+		var text = session.latestMsgData;
 		if(!!text) {
 
 			text = aesDecryptText(text);
@@ -178,28 +180,28 @@ function bindSessions(autoRemove){
 
 		var session_name = '未知';
 		var session_avatar = ' ';
-		if(session.session_type == SessionType.SESSION_TYPE_GROUP) {
-			var groupinfo = imDb.findGroupInfoById(session.session_id);
+		if(session.sessionType == SessionType.SESSION_TYPE_GROUP) {
+			var groupinfo = imDb.findGroupInfoById(session.sessionId);
 			if(!!groupinfo) {
-				session_name = groupinfo.group_name
-					session_avatar = groupinfo.group_avatar;
+				session_name = groupinfo.groupName
+					session_avatar = groupinfo.groupAvatar;
 			}else if(autoRemove) {
 				continue;
 			}else {
-				group_list.push({group_id:session.session_id,version:0});
+				group_list.push({group_id:session.sessionId,version:0});
 			}
 		}else {
-			var userinfo = imDb.getUserbyId(session.session_id);
+			var userinfo = imDb.getUserbyId(session.sessionId);
 			if(!!userinfo) {
-				session_name = userinfo.user_nick_name;     
-				session_avatar = userinfo.avatar_url;
+				session_name = userinfo.userNickName;     
+				session_avatar = userinfo.avatarUrl;
 			}else {
-				nullUserIds.push(session.session_id);
+				nullUserIds.push(session.sessionId);
 			}
 
 		}
 
-		var session_tag = 'unread_' + session.session_type + '_' + session.session_id;
+		var session_tag = 'unread_' + session.sessionType + '_' + session.sessionId;
 		var item = '<li class="item-content item-link session-action" value="'+ i +'">' + 
 			'<div class="item-media"><img src="'+ session_avatar + '" class="avatar" ></div>' +
 			'<div class="item-inner">' +
@@ -215,33 +217,33 @@ function bindSessions(autoRemove){
 		//console.log(this.value + ' session:' + JSON.stringify(session));
 
 		currentSession.title = '';
-		if(session.session_type == SessionType.SESSION_TYPE_GROUP) {
-			var groupinfo = imDb.findGroupInfoById(session.session_id);
-			currentSession.title = groupinfo.group_name;
+		if(session.sessionType == SessionType.SESSION_TYPE_GROUP) {
+			var groupinfo = imDb.findGroupInfoById(session.sessionId);
+			currentSession.title = groupinfo.groupName;
 
 		}else {
-			var userinfo = imDb.getUserbyId(session.session_id);
-			currentSession.title = userinfo.user_nick_name;
+			var userinfo = imDb.getUserbyId(session.sessionId);
+			currentSession.title = userinfo.userNickName;
 		}
-		currentSession.session_id = session.session_id;
-		currentSession.session_type = session.session_type;
-		currentSession.current_msg_id = session.latest_msg_id;
+		currentSession.session_id = session.sessionId;
+		currentSession.session_type = session.sessionType;
+		currentSession.current_msg_id = session.latestMsgId;
 		mainView.router.loadPage('chatmain');  
 	});
 
 	if(group_list.length > 0 && !autoRemove) {
 		var content = {group_version_list:group_list};
-		getGroupInfoApiAction(content,function(state,res1) {
-			imDb.addGroupInfoToDb(res1.group_info_list);
+		client.getGroupInfoApiAction(content,function(state,res) {
+			imDb.addGroupInfoToDb(res.groupInfoList);
 			bindSessions(true);
 		});
 	}
 	if(nullUserIds.length > 0 && !autoRemove) { 
-		getFriendsByIds(nullUserIds,function(state,res){
-			var users = res.user_info_list;
+		client.getFriendsByIds(nullUserIds,function(state,res){
+			var users = res.userInfoList;
 			for(var id in users) {
 					var user = users[id];
-					imDb.addUsertoDb(user.user_id,user);
+					imDb.addUsertoDb(user.userId,user);
 
 			}
 			bindSessions(true);
@@ -249,12 +251,12 @@ function bindSessions(autoRemove){
 	}
 
 	if(!autoRemove) {
-		getUnreadMessageCnt({},function(state,res){
-			for(var index in res.unreadinfo_list) {
+		client.getUnreadMessageCnt({},function(state,res){
+			for(var index in res.unreadinfoList) {
 
-				var unreadinfo = res.unreadinfo_list[index];
-				var session_tag = 'unread_' + unreadinfo.session_type + '_' + unreadinfo.session_id;
-				$$('#' + session_tag).html('<span class="badge" >' + unreadinfo.unread_cnt +'</span>');
+				var unreadinfo = res.unreadinfoList[index];
+				var session_tag = 'unread_' + unreadinfo.sessionType + '_' + unreadinfo.sessionId;
+				$$('#' + session_tag).html('<span class="badge" >' + unreadinfo.unreadCnt +'</span>');
 
 			}
 		});
@@ -266,8 +268,8 @@ function loadRecentlySession(){
 	if(imDb.session_list) {
 		bindSessions(false);
 	}else {
-		getRecentlySession({user_id:connection.uid,latest_update_time:0},function(state,res){
-			imDb.session_list = res.contact_session_list;
+		client.getRecentlySession({user_id:client.uid,latest_update_time:0},function(state,res){
+			imDb.session_list = res.contactSessionList;
 			bindSessions(false);
 		});
 	}
@@ -276,17 +278,17 @@ function loadRecentlySession(){
 
 function loadNewMsgToChatMain(newMsg){
 	var msg = {};
-	var senderId = newMsg.user_id;
+	var senderId = newMsg.userId;
 	var user = imDb.getUserbyId(senderId);
 	if(!!user) {
-		msg.avatar = user.avatar_url;
-		msg.name = user.user_nick_name;
+		msg.avatar = user.avatarUrl;
+		msg.name = user.userNickName;
 	}else {
 		msg.name = senderId;
 		msg.avatar = '';
 	}
-	var text = aesDecryptText(newMsg.msg_data);
-
+	var text = aesDecryptText(newMsg.msgData);
+	console.log('text:' + text);
 	if(newMsg.type == MsgType.MSG_TYPE_GROUP_TEXT || newMsg.type == MsgType.MSG_TYPE_SINGLE_TEXT) {
 		if(text.indexOf(DD_MESSAGE_IMAGE_PREFIX) == 0) {
 
@@ -302,8 +304,9 @@ function loadNewMsgToChatMain(newMsg){
 	}else {
 		msg.text = '[语音]';    
 	}
+	
 
-	if(connection.uid == senderId) {
+	if(client.uid == senderId) {
 		msg.type = 'sent';
 	}else {
 		msg.type = 'received';
@@ -314,7 +317,7 @@ function loadNewMsgToChatMain(newMsg){
 	msg.time = time[1];
 
 	currentSession.MessagesManager.addMessage(msg);
-	answerMsg({session_type:currentSession.session_type,session_id:newMsg.to_session_id,msg_id:newMsg.msg_id},function(state,res){
+	client.answerMsg({session_type:currentSession.session_type,session_id:newMsg.toSessionId,msg_id:newMsg.msgId},function(state,res){
 		console.log('finish answer:' + JSON.stringify(res));
 	});
 }
@@ -370,7 +373,7 @@ myApp.onPageInit('chatmain', function (page) {
 
 		var messageType = 'sent';
 
-	var senderId = connection.uid;
+	var senderId = client.uid;
 	var user = imDb.getUserbyId(senderId);
 	var avatar, name;
 	if(!!user) {
@@ -397,25 +400,25 @@ myApp.onPageInit('chatmain', function (page) {
 
 
 	if(currentSession.session_type == SessionType.SESSION_TYPE_GROUP) {
-		sendGroupTextMsg(messageText,currentSession.session_id,function(state,res){
+		client.sendGroupTextMsg(messageText,currentSession.session_id,function(state,res){
 			if(state) {
 				console.log('send ok:' + JSON.stringify(res)); 
-				res.user_id = res.from_user_id;
-				res.msg_data = Base64.encode(res.msg_data);
-				res.type = res.msg_type;
-				res.session_id = res.to_session_id;
+				res.userId = res.fromUserId;
+				res.msgData = Base64.encode(res.msgData);
+				res.type = res.msgType;
+				res.sessionId = res.toSessionId;
 				var key = currentSession.session_type + '_' + currentSession.session_id;
 				imDb.addMessagetoDb(key,res);   
 			}
 		});
 	}else {
-		sendSingleTextMsg(messageText,currentSession.session_id,function(state,res){
+		client.sendSingleTextMsg(messageText,currentSession.session_id,function(state,res){
 			if(state) {
-				console.log('send ok:' + JSON.stringify(res)); 
-				res.user_id = res.from_user_id;
-				res.msg_data = Base64.encode(res.msg_data);
-				res.type = res.msg_type;
-				res.session_id = res.to_session_id;
+				//console.log('send ok:' + JSON.stringify(res)); 
+				res.userId = res.fromUserId;
+				res.msgData = Base64.encode(res.msgData);
+				res.type = res.msgType;
+				res.sessionId = res.toSessionId;
 				var key = currentSession.session_type + '_' + currentSession.session_id;
 				imDb.addMessagetoDb(key,res);   
 			}else {
@@ -428,69 +431,80 @@ myApp.onPageInit('chatmain', function (page) {
 	
 });
 
+window.AudioContext = window.AudioContext || window.webkitAudioContext || window.mozAudioContext || window.msAudioContext;
+var audioContext = new window.AudioContext();
 
-
+function playSound(soundBuffer) {
+	var asset = AV.Asset.fromBuffer(audioBuffer.buffer);
+	asset.decodeToBuffer(function(buffer) {
+				console.log('decode ok');
+                console.log(buffer);
+ 			 // buffer is now a Float32Array containing the entire decoded audio file
+	});
+}
 
 function loadMsgForChatMain(msgs,messagesContainer) {
 	var nullUserIds = [];
 
 	for(var i in msgs) {
-		if(msgs[i].msg_id > currentSession.current_msg_id){
-			currentSession.current_msg_id = msgs[i].msg_id;
+		if(msgs[i].msgId > currentSession.current_msg_id){
+			currentSession.current_msg_id = msgs[i].msgId;
 		}
 		var msg = {}; 
-		var sender = msgs[i].from_session_id;
+		var sender = msgs[i].fromSessionId;
 		var userInfo = imDb.getUserbyId('' + sender);
-		var text = aesDecryptText(msgs[i].msg_data);
-		if(msgs[i].msg_type == MsgType.MSG_TYPE_GROUP_TEXT || msgs[i].msg_type == MsgType.MSG_TYPE_SINGLE_TEXT) {
+		//var text = '';
+		//console.log('text:' + text);
+		if(msgs[i].msgType == MsgType.MSG_TYPE_GROUP_TEXT || msgs[i].msgType == MsgType.MSG_TYPE_SINGLE_TEXT) {
+			//console.log(msgs[i].msgData);
+			var text = aesDecryptText(msgs[i].msgData);
 			if(text.indexOf(DD_MESSAGE_IMAGE_PREFIX) == 0) {
 			
 				var index = text.indexOf('{') + 2;
 				var img = text.substr(index,text.lastIndexOf('}') - 1 - index);
 				console.log(img);
-	
 				msg.text = '<img src="' + img +'" />';
 				msg.hasImage = true;
 			}else {
 				msg.text = text;        
 			}
 		}else {
+			var data  = msgs[i].msgData;
 			msg.text = '[语音]';    
 		}
 		if(userInfo) {
-			msg.name = userInfo.user_nick_name;
-			msg.avatar = userInfo.avatar_url;
+			msg.name = userInfo.userNickName;
+			msg.avatar = userInfo.avatarUrl;
 		}else {
 			nullUserIds.push(sender);
 			msg.name = sender;
 			msg.avatar = '';
 		}
-		if(connection.uid == sender) {
+		if(client.uid == sender) {
 			msg.type = 'sent';
 		}else {
 			msg.type = 'received';
 		}
 		msg.label = '';
 		msg.senderId = sender;
-		var time = new Date(msgs[i].create_time * 1000).toLocaleString().split(', ');
+		var time = new Date(msgs[i].createTime * 1000).toLocaleString().split(', ');
 		msg.day = time[0];
 		msg.time = time[1];
 		messagesContainer.addMessage(msg,'prepend');
 	}
 
-	answerMsg({session_type:currentSession.session_type,session_id:currentSession.session_id,msg_id:currentSession.current_msg_id},function(state,res){
+	client.answerMsg({session_type:currentSession.session_type,session_id:currentSession.session_id,msg_id:currentSession.current_msg_id},function(state,res){
 		console.log('finish answer:' + JSON.stringify(res));
 	});
 
-	getFriendsByIds(nullUserIds,function(state,res){
+	client.getFriendsByIds(nullUserIds,function(state,res){
 
-		var users = res.user_info_list;
+		var users = res.userInfoList;
 		for(var id in users) {
 			var user = users[id];
-			imDb.addUsertoDb(user.user_id,user);
-			$$('.message-sender-' + id).html(user.user_nick_name);
-		$$('.message-avatar-' + id).css('background-image', 'url(' + user.avatar_url + ')');
-
+			imDb.addUsertoDb(user.userId,user);
+			$$('.message-sender-' + id).html(user.userNickName);
+			$$('.message-avatar-' + id).css('background-image', 'url(' + user.avatarUrl + ')');
 		}
 	});
 }
@@ -501,27 +515,21 @@ function showHome(){
 }
 
 
-$$('.login-action').on('click', function () {
-	var formData = myApp.formToJSON('#login-form');
-	if(connection.logined) {
-		showHome();
-		return;
-	}
-	myApp.showIndicator();
+function doLogin(formData){
 	var imLoginData = {username:formData.username,password:md5(formData.password)};
 	console.log(imLoginData);
-	loginAction(imLoginData,function(state,resData){
+	client.loginAction(imLoginData,function(state,resData){
 		if(state) {
-			imDb.initDb();
+			imDb.initDb(client.uid);
 			myApp.hideIndicator();
 			showHome();
 			
-			getAllFriends({},function(state,res){
+			client.getAllFriends({},function(state,res){
 				//console.log(res);
-				var users = res.user_list;
+				var users = res.userList;
 				for(var id in users) {
 					var user = users[id];
-					imDb.addUsertoDb(user.user_id,user);
+					imDb.addUsertoDb(user.userId,user);
 
 				}
 			});
@@ -531,5 +539,30 @@ $$('.login-action').on('click', function () {
 			alert(resData);
 		}
 	});    
+}
 
+
+function waitWSConnectionForLogin(formData) {
+	setTimeout(function(){
+		if(client.wsIsReady()) {
+			doLogin(formData);
+			return;
+		}else {
+			waitWSConnectionForLogin(formData);
+		}
+	},1000);
+}
+
+$$('.login-action').on('click', function () {
+	var formData = myApp.formToJSON('#login-form');
+	if(client.logined) {
+		showHome();
+		return;
+	}
+	myApp.showIndicator();
+	if(client.wsIsReady()) {
+		doLogin(formData);
+	}else {
+		waitWSConnectionForLogin(formData);
+	}
 });
