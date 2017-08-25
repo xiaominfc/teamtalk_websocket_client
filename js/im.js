@@ -170,18 +170,19 @@ function getStringLength(str) {
 //aes加密
 function aesEncryptText(text)
 {
+	var result = '';
 	try {
 	    var data = padText(CryptoJS.enc.Utf8.parse(text),getStringLength(text));
-	    console.log(data);
+	    //console.log(data);
 		var key = CryptoJS.enc.Utf8.parse('12345678901234567890123456789012');
 		var iv  = CryptoJS.enc.Utf8.parse('12345678901234567890123456789012');
 		var encrypted = CryptoJS.AES.encrypt(data, key, {iv:iv , mode: CryptoJS.mode.ECB, padding: CryptoJS.pad.NoPadding});
-		text = encrypted.ciphertext.toString(CryptoJS.enc.Base64);
+		result = encrypted.ciphertext.toString(CryptoJS.enc.Base64);
 	}catch(err)
 	{
-		text = '';
+		console.log(err);
 	}
-	return text;
+	return result;
 }
 
 //aes解密
@@ -233,7 +234,7 @@ function bindWebsocketForClinet(wsSocket, client) {
 		data.commandId = dv.getUint16(10);
 		data.seqNum = dv.getUint16(12);
 		data.serviceId = dv.getUint16(8);
-		data.content = event.data;
+		data.content = event.data.slice(16);
 		client.handleEventData(data);
 	}
 
@@ -322,7 +323,7 @@ TeamTalkWebClient.prototype.handleResForLogin = function(data) {
     //var IMLoginRes = IMLogin.build('IM.Login.IMLoginRes');
 
     var IMLoginRes = IMLogin.lookupType('IM.Login.IMLoginRes');
-	var msg = IMLoginRes.decode(new Uint8Array(data.content.slice(16)));
+	var msg = IMLoginRes.decode(new Uint8Array(data.content));
 	if(msg) {
 		var loginApi = apiHashMap.Get(data.seqNum);
 		if(msg.resultCode == ResultType.REFUSE_REASON_NONE) {
@@ -346,9 +347,10 @@ TeamTalkWebClient.prototype.relogin = function(callback) {
 //发消息的api 
 TeamTalkWebClient.prototype.sendMsgApiAction = function(msg,callback) {
 	var IMMsgData = IMMessage.lookupType('IM.Message.IMMsgData');
-	var msgContent = aesEncryptText(msg.msg_data);
-	var data = {fromUserId:msg.from_user_id,toSessionId:msg.to_session_id,msgData:Base64.encode(msgContent),msgType:msg.msg_type,msgId:msg.msg_id,createTime:msg.created};
-	var message =  IMMsgData.create(data);
+	var msgContent = aesEncryptText(msg.msgData);
+	msg.msgData = Base64.encode(msgContent);
+	//var data = {fromUserId:msg.fromUserId,toSessionId:msg.toSession_id,msgData:Base64.encode(msgContent),msgType:msg.msg_type,msgId:msg.msg_id,createTime:msg.created};
+	var message =  IMMsgData.create(msg);
 	var msgBuffer = IMMsgData.encode(message).finish(); 
 	var api = {msg:msg , callback:callback};
 	var sn = genSeqNum();
@@ -361,12 +363,12 @@ TeamTalkWebClient.prototype.sendMsgApiAction = function(msg,callback) {
 //消息发送到服务器成功(服务器反馈)
 TeamTalkWebClient.prototype.handleResForMsgAck = function(data) {
 	var IMMsgDataAck = IMMessage.lookupType('IM.Message.IMMsgDataAck');
-	var msg = IMMsgDataAck.decode(new Uint8Array(data.content.slice(16)));
+	var msg = IMMsgDataAck.decode(new Uint8Array(data.content));
 	var sendMsgApi = apiHashMap.Get(data.seqNum);
 	if(!!sendMsgApi) {
 		sendMsgApi.msg.msgId =  msg.msgId;
 		sendMsgApi.callback(true,sendMsgApi.msg);
-		apiHashMap.Remove(data.content.seqNum);
+		apiHashMap.Remove(data.seqNum);
 	}
 }
 
@@ -386,7 +388,7 @@ TeamTalkWebClient.prototype.getGroupListApiAction = function(callback) {
 //处理服务端返回的群列表
 TeamTalkWebClient.prototype.handleGroupNormalList = function(data) {
 	var IMNormalGroupListRsp = IMGroup.lookupType('IM.Group.IMNormalGroupListRsp');
-	var msg = IMNormalGroupListRsp.decode(new Uint8Array(data.content.slice(16)));
+	var msg = IMNormalGroupListRsp.decode(new Uint8Array(data.content));
 	var rsp = {};
 	rsp.seqNum = data.seqNum;
 	rsp.content = msg;
@@ -409,7 +411,7 @@ TeamTalkWebClient.prototype.getGroupInfoApiAction = function(content,callback) {
 //处理服务端返回的群详情
 TeamTalkWebClient.prototype.handleGroupInfoRes = function(data) {
 	var IMGroupInfoListRsp = IMGroup.lookupType('IM.Group.IMGroupInfoListRsp');
-	var msg = IMGroupInfoListRsp.decode(new Uint8Array(data.content.slice(16)));
+	var msg = IMGroupInfoListRsp.decode(new Uint8Array(data.content));
 	var rsp = {};
 	rsp.seqNum = data.seqNum;
 	rsp.content = msg;
@@ -431,7 +433,7 @@ TeamTalkWebClient.prototype.getMsgListApiAction = function(content,callback) {
 //处理服务端应答回来的消息列表
 TeamTalkWebClient.prototype.handleResForMsgList = function(data) {
 	var IMGetMsgListRsp = IMMessage.lookupType('IM.Message.IMGetMsgListRsp');
-	var msg = IMGetMsgListRsp.decode(new Uint8Array(data.content.slice(16)));
+	var msg = IMGetMsgListRsp.decode(new Uint8Array(data.content));
 	var rsp = {};
 	rsp.seqNum = data.seqNum;
 	rsp.content = msg;
@@ -455,7 +457,7 @@ TeamTalkWebClient.prototype.getRecentlySession = function(content,callback){
 TeamTalkWebClient.prototype.handleResForRecentlySession = function(data)
 {
 	var IMRecentContactSessionRsp = IMBuddy.lookupType('IM.Buddy.IMRecentContactSessionRsp');
-	var msg = IMRecentContactSessionRsp.decode(new Uint8Array(data.content.slice(16)));
+	var msg = IMRecentContactSessionRsp.decode(new Uint8Array(data.content));
 	var rsp = {};
 	rsp.seqNum = data.seqNum;
 	rsp.content = msg;
@@ -480,7 +482,7 @@ TeamTalkWebClient.prototype.getAllFriends = function(content,callback){
 
 TeamTalkWebClient.prototype.handleResForAllFriends = function(data) {
 	var IMAllUserRsp = IMBuddy.lookupType('IM.Buddy.IMAllUserRsp');
-	var msg = IMAllUserRsp.decode(new Uint8Array(data.content.slice(16)));
+	var msg = IMAllUserRsp.decode(new Uint8Array(data.content));
 	var rsp = {};
 	rsp.seqNum = data.seqNum;
 	rsp.content = msg;
@@ -505,7 +507,7 @@ TeamTalkWebClient.prototype.getFriendsByIds = function(ids,callback) {
 
 TeamTalkWebClient.prototype.handleResForFriendsByIds = function(data){
 	var IMUsersInfoRsp = IMBuddy.lookupType('IM.Buddy.IMUsersInfoRsp');
-	var msg = IMUsersInfoRsp.decode(new Uint8Array(data.content.slice(16)));
+	var msg = IMUsersInfoRsp.decode(new Uint8Array(data.content));
 	var rsp = {};
 	rsp.seqNum = data.seqNum;
 	rsp.content = msg;
@@ -526,7 +528,7 @@ TeamTalkWebClient.prototype.getUnreadMessageCnt = function(content,callback){
 
 TeamTalkWebClient.prototype.handleUnReadMessageCnt = function(data) {
 	var IMUnreadMsgCntRsp = IMMessage.lookupType('IM.Message.IMUnreadMsgCntRsp');
-	var msg = IMUnreadMsgCntRsp.decode(new Uint8Array(data.content.slice(16)));
+	var msg = IMUnreadMsgCntRsp.decode(new Uint8Array(data.content));
 	var rsp = {};
 	rsp.seqNum = data.seqNum;
 	rsp.content = msg;
@@ -604,9 +606,10 @@ TeamTalkWebClient.prototype.handleEventData = function(data) {
 //收到一条新消息
 TeamTalkWebClient.prototype.handleResForNewMsg = function(data) {
 	if(data.content) {
+		console.log(data);
 		if(typeof this.msgHandler === "function") {
-			var IMMsgData = IMMessage.build('IM.Message.IMMsgData');
-			var msg = IMMsgData.decode(data.content.slice(16));
+			var IMMsgData = IMMessage.lookupType('IM.Message.IMMsgData');
+			var msg = IMMsgData.decode(new Uint8Array(data.content));
 			this.msgHandler(msg);
 		}
 	}
@@ -630,14 +633,14 @@ TeamTalkWebClient.prototype.simpleWorkForHandle = function(data) {
 
 //给指定群号发送一条消息
 TeamTalkWebClient.prototype.sendGroupTextMsg = function(text,group_id,callback) {
-	var content = {from_user_id:this.uid,to_session_id:group_id,msg_data:text,msg_type:MsgType.MSG_TYPE_GROUP_TEXT,msg_id:local_msg_id,created:Date.parse(new Date())/ 1000};
+	var content = {fromUserId:this.uid,toSessionId:group_id,msgData:text,msgType:MsgType.MSG_TYPE_GROUP_TEXT,msgId:local_msg_id,createTime:Date.parse(new Date())/ 1000};
 	local_msg_id++;
 	this.sendMsgApiAction(content,callback);
 }
 
 //给指定用户发送一条消息
 TeamTalkWebClient.prototype.sendSingleTextMsg = function(text,to_user_id,callback) {
-	var content = {from_user_id:this.uid,to_session_id:to_user_id,msg_data:text,msg_type:MsgType.MSG_TYPE_SINGLE_TEXT,msg_id:local_msg_id,created:Date.parse(new Date())/ 1000};
+	var content = {fromUserId:this.uid,toSessionId:to_user_id,msgData:text,msgType:MsgType.MSG_TYPE_SINGLE_TEXT,msgId:local_msg_id,createTime:Date.parse(new Date())/ 1000};
 	local_msg_id++;
 	this.sendMsgApiAction(content,callback);
 }

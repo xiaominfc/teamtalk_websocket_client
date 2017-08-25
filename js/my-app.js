@@ -16,7 +16,6 @@ var client = new TeamTalkWebClient({wsurl:'ws://im.xiaominfc.com:9090'});
 //client.connection();
 
 myApp.onPageAfterAnimation('chatmain', function (page) {
-	console.log('pageAfterAnimation');
 	myApp.showIndicator();
 	var key = currentSession.session_type + '_' + currentSession.session_id;
 
@@ -47,14 +46,14 @@ myApp.onPageAfterAnimation('home', function (page) {
 
 client.msgHandler = function(newMsg) {
 	//console.log('new msg:' + JSON.stringify(res) + ' at:' + mainView.activePage.name);
-	newMsg.user_id = newMsg.fromUserId;
+	newMsg.userId = newMsg.fromUserId;
 	newMsg.type = newMsg.msgType; 
 	newMsg.session_id = newMsg.toSessionId;   
 	var msg_session_type = (newMsg.msgType === MsgType.MSG_TYPE_GROUP_TEXT || newMsg.type === MsgType.MSG_TYPE_GROUP_AUDIO)? SessionType.SESSION_TYPE_GROUP:SessionType.SESSION_TYPE_SINGLE;
-	var msg_session_key = msgSessionType + '_' + newMsg.toSessionId;    
+	var msg_session_key = msg_session_type + '_' + newMsg.toSessionId;    
 
 	if(msg_session_type === SessionType.SESSION_TYPE_SINGLE && newMsg.userId != client.uid) {
-		msg_session_key = msg_session_type + '_' + res.userId; 
+		msg_session_key = msg_session_type + '_' + newMsg.userId; 
 	}
 	imDb.addMessagetoDb(msg_session_key,newMsg);
 
@@ -269,6 +268,7 @@ function loadRecentlySession(){
 		bindSessions(false);
 	}else {
 		client.getRecentlySession({user_id:client.uid,latest_update_time:0},function(state,res){
+			console.log(res);
 			imDb.session_list = res.contactSessionList;
 			bindSessions(false);
 		});
@@ -302,7 +302,10 @@ function loadNewMsgToChatMain(newMsg){
 			msg.text = text;        
 		}
 	}else {
-		msg.text = '[语音]';    
+		
+		var dv = new DataView(newMsg.msgData.slice(0,4).buffer);
+		var audioTime = dv.getUint32(0) + '秒';
+		msg.text = "<div class='audio-item' id='item-"+newMsg.msgId+"' >[语音:" + audioTime +"]</div>";        
 	}
 	
 
@@ -317,6 +320,10 @@ function loadNewMsgToChatMain(newMsg){
 	msg.time = time[1];
 
 	currentSession.MessagesManager.addMessage(msg);
+	$$('#item-'+newMsg.msgId).on('click',function(ele){
+		var data  = newMsg.msgData;
+		playSound(data.slice(4));
+	});
 	client.answerMsg({session_type:currentSession.session_type,session_id:newMsg.toSessionId,msg_id:newMsg.msgId},function(state,res){
 		console.log('finish answer:' + JSON.stringify(res));
 	});
@@ -373,74 +380,74 @@ myApp.onPageInit('chatmain', function (page) {
 
 		var messageType = 'sent';
 
-	var senderId = client.uid;
-	var user = imDb.getUserbyId(senderId);
-	var avatar, name;
-	if(!!user) {
-		avatar = user.avatar_url;
-		name = user.user_nick_name;
-	}
+		var senderId = client.uid;
+		var user = imDb.getUserbyId(senderId);
+		var avatar, name;
+		if(!!user) {
+			avatar = user.avatar_url;
+			name = user.user_nick_name;
+		}
 
-	var time = new Date().toLocaleString().split(', ');
+		var time = new Date().toLocaleString().split(', ');
 
 
-	currentSession.MessagesManager.addMessage({
-		// Message text
-		text: messageText,
-		// 随机消息类型
-		type: messageType,
-		// 头像和名称
-		avatar: avatar,
-		name: name,
-		senderId:senderId,
-		// 日期
-		day:time[0],
-		time:time[1],
+		currentSession.MessagesManager.addMessage({
+			// Message text
+			text: messageText,
+			// 消息类型
+			type: messageType,
+			// 头像和名称
+			avatar: avatar,
+			name: name,
+			senderId:senderId,
+			// 日期
+			day:time[0],
+			time:time[1],
+		});
+
+
+		if(currentSession.session_type == SessionType.SESSION_TYPE_GROUP) {
+			client.sendGroupTextMsg(messageText,currentSession.session_id,function(state,res){
+				if(state) {
+					console.log('send ok:' + JSON.stringify(res)); 
+					res.userId = res.fromUserId;
+					res.msgData = Base64.encode(res.msgData);
+					res.type = res.msgType;
+					res.sessionId = res.toSessionId;
+					var key = currentSession.session_type + '_' + currentSession.session_id;
+					imDb.addMessagetoDb(key,res);   
+				}
+			});
+		}else {
+			client.sendSingleTextMsg(messageText,currentSession.session_id,function(state,res){
+				if(state) {
+					console.log(res);
+					//console.log('send ok:' + JSON.stringify(res)); 
+					res.userId = res.fromUserId;
+					res.msgData = Base64.encode(res.msgData);
+					res.type = res.msgType;
+					res.sessionId = res.toSessionId;
+					var key = currentSession.session_type + '_' + currentSession.session_id;
+					imDb.addMessagetoDb(key,res);   
+				}else {
+					console.log('send failed');
+				}
+			});
+		}
 	});
-
-
-	if(currentSession.session_type == SessionType.SESSION_TYPE_GROUP) {
-		client.sendGroupTextMsg(messageText,currentSession.session_id,function(state,res){
-			if(state) {
-				console.log('send ok:' + JSON.stringify(res)); 
-				res.userId = res.fromUserId;
-				res.msgData = Base64.encode(res.msgData);
-				res.type = res.msgType;
-				res.sessionId = res.toSessionId;
-				var key = currentSession.session_type + '_' + currentSession.session_id;
-				imDb.addMessagetoDb(key,res);   
-			}
-		});
-	}else {
-		client.sendSingleTextMsg(messageText,currentSession.session_id,function(state,res){
-			if(state) {
-				//console.log('send ok:' + JSON.stringify(res)); 
-				res.userId = res.fromUserId;
-				res.msgData = Base64.encode(res.msgData);
-				res.type = res.msgType;
-				res.sessionId = res.toSessionId;
-				var key = currentSession.session_type + '_' + currentSession.session_id;
-				imDb.addMessagetoDb(key,res);   
-			}else {
-				console.log('send failed');
-			}
-		});
-	}
-	});  
-
-	
 });
 
 window.AudioContext = window.AudioContext || window.webkitAudioContext || window.mozAudioContext || window.msAudioContext;
 var audioContext = new window.AudioContext();
 
 function playSound(soundBuffer) {
-	var asset = AV.Asset.fromBuffer(audioBuffer.buffer);
-	asset.decodeToBuffer(function(buffer) {
-				console.log('decode ok');
-                console.log(buffer);
- 			 // buffer is now a Float32Array containing the entire decoded audio file
-	});
+	audioContext.decodeAudioData(soundBuffer.buffer,function(audioBuffer){
+		console.log(audioBuffer);
+		var sourceNode = audioContext.createBufferSource();  
+		sourceNode.connect(audioContext.destination);
+		sourceNode.buffer = audioBuffer;
+		sourceNode.start();
+	})
 }
 
 function loadMsgForChatMain(msgs,messagesContainer) {
@@ -469,8 +476,9 @@ function loadMsgForChatMain(msgs,messagesContainer) {
 				msg.text = text;        
 			}
 		}else {
-			var data  = msgs[i].msgData;
-			msg.text = '[语音]';    
+			var dv = new DataView(msgs[i].msgData.slice(0,4).buffer);
+			var audioTime = dv.getUint32(0) + '秒';
+			msg.text = "<div class='audio-item' value="+i+" >[语音:" + audioTime +"]</div>";    
 		}
 		if(userInfo) {
 			msg.name = userInfo.userNickName;
@@ -492,6 +500,13 @@ function loadMsgForChatMain(msgs,messagesContainer) {
 		msg.time = time[1];
 		messagesContainer.addMessage(msg,'prepend');
 	}
+
+	$$('.audio-item').on('click',function(ele){
+		//console.log(this.getAttribute('value'));
+		var index = this.getAttribute('value');
+		var data  = msgs[index].msgData;
+		playSound(data.slice(4));
+	});
 
 	client.answerMsg({session_type:currentSession.session_type,session_id:currentSession.session_id,msg_id:currentSession.current_msg_id},function(state,res){
 		console.log('finish answer:' + JSON.stringify(res));
