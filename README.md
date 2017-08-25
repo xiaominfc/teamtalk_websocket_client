@@ -1,7 +1,8 @@
 # teamtalk_websocket_client
 给teamtalk_websocket_server测试用的前端实现代码
 
-弱弱的参考[https://github.com/xiaominfc/teamtalk_websocket_server:https://github.com/xiaominfc/teamtalk_websocket_server]编译出websocket_server并运行
+弱弱的参考[teamtalk_websocket_server:https://github.com/xiaominfc/teamtalk_websocket_server]编译出websocket_server并运行
+地址:https://github.com/xiaominfc/teamtalk_websocket_server
 ```
 修改js/my-app.js  15行
 var client = new TeamTalkWebClient({wsurl:'ws://im.xiaominfc.com:9090'});
