@@ -23,3 +23,14 @@ location / {
 
 ```
 
+```
+2017-08-22
+重构了代码，用google官方提供的buffer proto的js库实现数据的解析 
+```
+
+
+```
+2017-08-25
+支持语音的解析以及播放，但是客户端语音的编码格式需要换成Opus，原来的是speex。speex自己的官网上也说用Opus来替代speex，Opus比speex更好。
+客户端的具体替换可以查看我维护的TeamTalk的工程
+```
