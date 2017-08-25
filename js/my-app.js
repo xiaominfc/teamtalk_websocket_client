@@ -441,12 +441,15 @@ window.AudioContext = window.AudioContext || window.webkitAudioContext || window
 var audioContext = new window.AudioContext();
 
 function playSound(soundBuffer) {
+	console.log('do play sound');
 	audioContext.decodeAudioData(soundBuffer.buffer,function(audioBuffer){
 		console.log(audioBuffer);
 		var sourceNode = audioContext.createBufferSource();  
 		sourceNode.connect(audioContext.destination);
 		sourceNode.buffer = audioBuffer;
 		sourceNode.start();
+	},function(err){
+		console.log(err);
 	})
 }
 
