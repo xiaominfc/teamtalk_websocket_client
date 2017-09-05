@@ -17,14 +17,14 @@ var client = new TeamTalkWebClient({wsurl:'ws://im.xiaominfc.com:9090'});
 
 myApp.onPageAfterAnimation('chatmain', function (page) {
 	myApp.showIndicator();
-	var key = currentSession.session_type + '_' + currentSession.session_id;
+	var key = currentSession.sessionType + '_' + currentSession.sessionId;
 
 	currentSession.messages = imDb.getMessageBykey(key);
 	if(currentSession.messages) {
 		myApp.hideIndicator();
 		loadMsgForChatMain(currentSession.messages,currentSession.MessagesManager);
 	}else {
-		var content = {session_id:currentSession.session_id,session_type:currentSession.session_type,msg_id_begin:0,msg_cnt:40};
+		var content = {sessionId:currentSession.sessionId,sessionType:currentSession.sessionType,msgIdBegin:0,msgCnt:40};
 		client.getMsgListApiAction(content,function(state,res) {
 			imDb.addMessagetoDb(key,res.msgList);
 			myApp.hideIndicator();
@@ -48,18 +48,18 @@ client.msgHandler = function(newMsg) {
 	//console.log('new msg:' + JSON.stringify(res) + ' at:' + mainView.activePage.name);
 	newMsg.userId = newMsg.fromUserId;
 	newMsg.type = newMsg.msgType; 
-	newMsg.session_id = newMsg.toSessionId;   
-	var msg_session_type = (newMsg.msgType === MsgType.MSG_TYPE_GROUP_TEXT || newMsg.type === MsgType.MSG_TYPE_GROUP_AUDIO)? SessionType.SESSION_TYPE_GROUP:SessionType.SESSION_TYPE_SINGLE;
-	var msg_session_key = msg_session_type + '_' + newMsg.toSessionId;    
+	newMsg.sessionId = newMsg.toSessionId;   
+	var msgSessionType = (newMsg.msgType === MsgType.MSG_TYPE_GROUP_TEXT || newMsg.type === MsgType.MSG_TYPE_GROUP_AUDIO)? SessionType.SESSION_TYPE_GROUP:SessionType.SESSION_TYPE_SINGLE;
+	var msgSessionKey = msgSessionType + '_' + newMsg.toSessionId;    
 
-	if(msg_session_type === SessionType.SESSION_TYPE_SINGLE && newMsg.userId != client.uid) {
-		msg_session_key = msg_session_type + '_' + newMsg.userId; 
+	if(msgSessionType === SessionType.SESSION_TYPE_SINGLE && newMsg.userId != client.uid) {
+		msgSessionKey = msgSessionType + '_' + newMsg.userId; 
 	}
-	imDb.addMessagetoDb(msg_session_key,newMsg);
+	imDb.addMessagetoDb(msgSessionKey,newMsg);
 
 	if(mainView.activePage.name == 'chatmain') {
-		var key = currentSession.session_type + '_' + currentSession.session_id;
-		if(key === msg_session_key) {
+		var key = currentSession.sessionType + '_' + currentSession.sessionId;
+		if(key === msgSessionKey) {
 			loadNewMsgToChatMain(newMsg);
 			return;    
 		}
@@ -99,33 +99,33 @@ function bindDataToContactlist(){
 	$$('.user-action').on('click',function(ele){
 		var user = imDb.getUserbyId(this.value);
 		currentSession.title = user.userNickName;
-		currentSession.session_id = parseInt(user.userId);
-		currentSession.session_type = SessionType.SESSION_TYPE_SINGLE;
-		currentSession.current_msg_id = 0;
+		currentSession.sessionId = parseInt(user.userId);
+		currentSession.sessionType = SessionType.SESSION_TYPE_SINGLE;
+		currentSession.currentMsgId = 0;
 		mainView.router.loadPage('chatmain');  
 	});
 }
 
 function bindDataToGrouplist(){
 	var html = '';
-	var group_info_list = imDb.getAllGroupList();
+	var groupInfoList = imDb.getAllGroupList();
 
-	for(var i in group_info_list){
-		var group_info = group_info_list[i];
+	for(var i in groupInfoList){
+		var groupInfo = groupInfoList[i];
 		var item = '<li class="item-content item-link group-action" value="'+ i +'">' + 
-			'<div class="item-media"><img src="'+ group_info.groupAvatar + '" class="avatar" ></div>' +
+			'<div class="item-media"><img src="'+ groupInfo.groupAvatar + '" class="avatar" ></div>' +
 			'<div class="item-inner">' +
-			'<div class="item-title">' + group_info.groupName +'</div>' +
+			'<div class="item-title">' + groupInfo.groupName +'</div>' +
 			'</div></li>';
 		html = html + item;
 	}
 	$$('#group-list').html(html);
 	$$('.group-action').on('click',function(ele){
-		var group_info = imDb.getAllGroupList()[this.value];
-		currentSession.title = group_info.groupName;
-		currentSession.session_id = group_info.groupId;
-		currentSession.session_type = SessionType.SESSION_TYPE_GROUP;
-		currentSession.current_msg_id = 0;
+		var groupInfo = imDb.getAllGroupList()[this.value];
+		currentSession.title = groupInfo.groupName;
+		currentSession.sessionId = groupInfo.groupId;
+		currentSession.sessionType = SessionType.SESSION_TYPE_GROUP;
+		currentSession.currentMsgId = 0;
 		mainView.router.loadPage('chatmain');  
 	});
 }
@@ -137,15 +137,15 @@ function loadConcats(){
 		
 		client.getGroupListApiAction(function(state,res){
 			if(state) {
-				var group_version_list = [];
+				var groupVersionList = [];
 				for(index in res.groupVersionList) {
 					var group_version = res.groupVersionList[index];
 					group_version.version = 0;
-					group_version_list.push(group_version);
+					groupVersionList.push(group_version);
 				}
-				var content = {group_version_list:group_version_list};
-				client.getGroupInfoApiAction(content,function(state,res1) {
-					imDb.addGroupInfoToDb(res1.groupInfoList);
+				var content = {groupVersionList:groupVersionList};
+				client.getGroupInfoApiAction(content,function(state,result) {
+					imDb.addGroupInfoToDb(result.groupInfoList);
 					bindDataToGrouplist();
 				});        
 			}
@@ -157,10 +157,10 @@ function loadConcats(){
 function bindSessions(autoRemove){
 	var html = '';
 
-	var group_list = [];
+	var groupList = [];
 	var nullUserIds = [];
-	for(var i in imDb.session_list){
-		var session = imDb.session_list[i];
+	for(var i in imDb.sessionList){
+		var session = imDb.sessionList[i];
 		if(session == null) {
 			continue;
 		}
@@ -177,34 +177,34 @@ function bindSessions(autoRemove){
 			text = '';
 		}
 
-		var session_name = '未知';
-		var session_avatar = ' ';
+		var sessionName = '未知';
+		var sessionAvatar = ' ';
 		if(session.sessionType == SessionType.SESSION_TYPE_GROUP) {
 			var groupinfo = imDb.findGroupInfoById(session.sessionId);
 			if(!!groupinfo) {
-				session_name = groupinfo.groupName
-					session_avatar = groupinfo.groupAvatar;
+				sessionName = groupinfo.groupName
+					sessionAvatar = groupinfo.groupAvatar;
 			}else if(autoRemove) {
 				continue;
 			}else {
-				group_list.push({group_id:session.sessionId,version:0});
+				groupList.push({group_id:session.sessionId,version:0});
 			}
 		}else {
 			var userinfo = imDb.getUserbyId(session.sessionId);
 			if(!!userinfo) {
-				session_name = userinfo.userNickName;     
-				session_avatar = userinfo.avatarUrl;
+				sessionName = userinfo.userNickName;     
+				sessionAvatar = userinfo.avatarUrl;
 			}else {
 				nullUserIds.push(session.sessionId);
 			}
 
 		}
 
-		var session_tag = 'unread_' + session.sessionType + '_' + session.sessionId;
+		var sessionTag = 'unread_' + session.sessionType + '_' + session.sessionId;
 		var item = '<li class="item-content item-link session-action" value="'+ i +'">' + 
-			'<div class="item-media"><img src="'+ session_avatar + '" class="avatar" ></div>' +
+			'<div class="item-media"><img src="'+ sessionAvatar + '" class="avatar" ></div>' +
 			'<div class="item-inner">' +
-			'<div class="item-title">' + session_name + '<div class="label">' + text +'</div></div>' +'<div class="item-after" id="' + session_tag +'"></div>' +
+			'<div class="item-title">' + sessionName + '<div class="label">' + text +'</div></div>' +'<div class="item-after" id="' + sessionTag +'"></div>' +
 			'</div></li>';
 		html = html + item;
 	}
@@ -212,7 +212,7 @@ function bindSessions(autoRemove){
 
 	$$('.session-action').on('click',function(ele){
 		//console.log(this.value);
-		var session = imDb.session_list[this.value];
+		var session = imDb.sessionList[this.value];
 		//console.log(this.value + ' session:' + JSON.stringify(session));
 
 		currentSession.title = '';
@@ -224,14 +224,14 @@ function bindSessions(autoRemove){
 			var userinfo = imDb.getUserbyId(session.sessionId);
 			currentSession.title = userinfo.userNickName;
 		}
-		currentSession.session_id = session.sessionId;
-		currentSession.session_type = session.sessionType;
-		currentSession.current_msg_id = session.latestMsgId;
+		currentSession.sessionId = session.sessionId;
+		currentSession.sessionType = session.sessionType;
+		currentSession.currentMsgId = session.latestMsgId;
 		mainView.router.loadPage('chatmain');  
 	});
 
-	if(group_list.length > 0 && !autoRemove) {
-		var content = {group_version_list:group_list};
+	if(groupList.length > 0 && !autoRemove) {
+		var content = {groupVersionList:groupList};
 		client.getGroupInfoApiAction(content,function(state,res) {
 			imDb.addGroupInfoToDb(res.groupInfoList);
 			bindSessions(true);
@@ -254,8 +254,8 @@ function bindSessions(autoRemove){
 			for(var index in res.unreadinfoList) {
 
 				var unreadinfo = res.unreadinfoList[index];
-				var session_tag = 'unread_' + unreadinfo.sessionType + '_' + unreadinfo.sessionId;
-				$$('#' + session_tag).html('<span class="badge" >' + unreadinfo.unreadCnt +'</span>');
+				var sessionTag = 'unread_' + unreadinfo.sessionType + '_' + unreadinfo.sessionId;
+				$$('#' + sessionTag).html('<span class="badge" >' + unreadinfo.unreadCnt +'</span>');
 
 			}
 		});
@@ -264,12 +264,12 @@ function bindSessions(autoRemove){
 }
 
 function loadRecentlySession(){
-	if(imDb.session_list) {
+	if(imDb.sessionList) {
 		bindSessions(false);
 	}else {
-		client.getRecentlySession({user_id:client.uid,latest_update_time:0},function(state,res){
+		client.getRecentlySession({userId:client.uid,latestUpdateTime:0},function(state,res){
 			console.log(res);
-			imDb.session_list = res.contactSessionList;
+			imDb.sessionList = res.contactSessionList;
 			bindSessions(false);
 		});
 	}
@@ -324,7 +324,7 @@ function loadNewMsgToChatMain(newMsg){
 		var data  = newMsg.msgData;
 		playSound(data.slice(4));
 	});
-	client.answerMsg({session_type:currentSession.session_type,session_id:newMsg.toSessionId,msg_id:newMsg.msgId},function(state,res){
+	client.answerMsg({sessionType:currentSession.sessionType,sessionId:newMsg.toSessionId,msgId:newMsg.msgId},function(state,res){
 		console.log('finish answer:' + JSON.stringify(res));
 	});
 }
@@ -384,8 +384,8 @@ myApp.onPageInit('chatmain', function (page) {
 		var user = imDb.getUserbyId(senderId);
 		var avatar, name;
 		if(!!user) {
-			avatar = user.avatar_url;
-			name = user.user_nick_name;
+			avatar = user.avatarUrl;
+			name = user.userNickName;
 		}
 
 		var time = new Date().toLocaleString().split(', ');
@@ -406,20 +406,20 @@ myApp.onPageInit('chatmain', function (page) {
 		});
 
 
-		if(currentSession.session_type == SessionType.SESSION_TYPE_GROUP) {
-			client.sendGroupTextMsg(messageText,currentSession.session_id,function(state,res){
+		if(currentSession.sessionType == SessionType.SESSION_TYPE_GROUP) {
+			client.sendGroupTextMsg(messageText,currentSession.sessionId,function(state,res){
 				if(state) {
 					console.log('send ok:' + JSON.stringify(res)); 
 					res.userId = res.fromUserId;
 					res.msgData = Base64.encode(res.msgData);
 					res.type = res.msgType;
 					res.sessionId = res.toSessionId;
-					var key = currentSession.session_type + '_' + currentSession.session_id;
+					var key = currentSession.sessionType + '_' + currentSession.sessionId;
 					imDb.addMessagetoDb(key,res);   
 				}
 			});
 		}else {
-			client.sendSingleTextMsg(messageText,currentSession.session_id,function(state,res){
+			client.sendSingleTextMsg(messageText,currentSession.sessionId,function(state,res){
 				if(state) {
 					console.log(res);
 					//console.log('send ok:' + JSON.stringify(res)); 
@@ -427,7 +427,7 @@ myApp.onPageInit('chatmain', function (page) {
 					res.msgData = Base64.encode(res.msgData);
 					res.type = res.msgType;
 					res.sessionId = res.toSessionId;
-					var key = currentSession.session_type + '_' + currentSession.session_id;
+					var key = currentSession.sessionType + '_' + currentSession.sessionId;
 					imDb.addMessagetoDb(key,res);   
 				}else {
 					console.log('send failed');
@@ -457,8 +457,8 @@ function loadMsgForChatMain(msgs,messagesContainer) {
 	var nullUserIds = [];
 
 	for(var i in msgs) {
-		if(msgs[i].msgId > currentSession.current_msg_id){
-			currentSession.current_msg_id = msgs[i].msgId;
+		if(msgs[i].msgId > currentSession.currentMsgId){
+			currentSession.currentMsgId = msgs[i].msgId;
 		}
 		var msg = {}; 
 		var sender = msgs[i].fromSessionId;
@@ -511,7 +511,7 @@ function loadMsgForChatMain(msgs,messagesContainer) {
 		playSound(data.slice(4));
 	});
 
-	client.answerMsg({session_type:currentSession.session_type,session_id:currentSession.session_id,msg_id:currentSession.current_msg_id},function(state,res){
+	client.answerMsg({sessionType:currentSession.sessionType,sessionId:currentSession.sessionId,msgId:currentSession.currentMsgId},function(state,res){
 		console.log('finish answer:' + JSON.stringify(res));
 	});
 

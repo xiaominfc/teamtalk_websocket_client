@@ -7,12 +7,6 @@ function HashMap(){
 	this.Remove = function(key){delete this[key]};  
 }
 
-
-var ByteBuffer = function(){
-
-}
-
-
 var imDb = {
 	initDb:function(uid) { 
 			   this.userDb = new HashMap;
@@ -80,27 +74,10 @@ var imDb = {
 };
 
 
-
-
-
-
-//init pb
-//var ProtoBuf = dcodeIO.ProtoBuf;
-// var IMBaseDefine = ProtoBuf.loadProtoFile("./pb/IM.BaseDefine.proto"); 
-// var IMLogin = ProtoBuf.loadProtoFile("./pb/IM.Login.proto");
-// var IMGroup = ProtoBuf.loadProtoFile("./pb/IM.Group.proto");
-// var IMOther = ProtoBuf.loadProtoFile("./pb/IM.Other.proto");
-// var IMBuddy = ProtoBuf.loadProtoFile("./pb/IM.Buddy.proto");
-// var IMMessage = ProtoBuf.loadProtoFile("./pb/IM.Message.proto");
-
 var IMBaseDefine,IMLogin,IMGroup,IMOther,IMBuddy,IMMessage;
-
-//var IMLoginNew;
-
 protobuf.load('./pb/IM.BaseDefine.proto',function(err,root){
 	IMBaseDefine = root;
 })
-
 protobuf.load('./pb/IM.Login.proto',function(err,root){
 	IMLogin = root;
 })
@@ -119,7 +96,7 @@ protobuf.load('./pb/IM.Message.proto',function(err,root){
 
 
 var apiHashMap = new HashMap;
-var local_msg_id = 1000000;
+var localMsgId = 1000000;
 var actionSeqNum = 1;
 
 //生成一个api的序列号 保证请求的顺序
@@ -212,8 +189,6 @@ function aesDecryptText(data)
 	return text;
 }
 
-
-
 function bindWebsocketForClinet(wsSocket, client) {
 	wsSocket.binaryType = "arraybuffer";
 	wsSocket.onopen = function(event) {
@@ -288,7 +263,7 @@ TeamTalkWebClient.prototype.connection = function() {
 
 TeamTalkWebClient.prototype.wsIsReady = function(){
 	if(this.websocket) {
-		return this.websocket.readyState == 1;
+		return this.websocket.readyState == 1 && IMBaseDefine && IMLogin && IMMessage && IMGroup && IMBuddy && IMOther;
 	}
 	return false;
 }
@@ -349,7 +324,7 @@ TeamTalkWebClient.prototype.sendMsgApiAction = function(msg,callback) {
 	var IMMsgData = IMMessage.lookupType('IM.Message.IMMsgData');
 	var msgContent = aesEncryptText(msg.msgData);
 	msg.msgData = Base64.encode(msgContent);
-	//var data = {fromUserId:msg.fromUserId,toSessionId:msg.toSession_id,msgData:Base64.encode(msgContent),msgType:msg.msg_type,msgId:msg.msg_id,createTime:msg.created};
+	//var data = {fromUserId:msg.fromUserId,toSessionId:msg.toSession_id,msgData:Base64.encode(msgContent),msgType:msg.msg_type,msgId:msg.msgId,createTime:msg.created};
 	var message =  IMMsgData.create(msg);
 	var msgBuffer = IMMsgData.encode(message).finish(); 
 	var api = {msg:msg , callback:callback};
@@ -399,7 +374,7 @@ TeamTalkWebClient.prototype.handleGroupNormalList = function(data) {
 //获取群详情
 TeamTalkWebClient.prototype.getGroupInfoApiAction = function(content,callback) {
 	var IMGroupInfoListReq = IMGroup.lookupType('IM.Group.IMGroupInfoListReq');
-	var data = {userId:this.uid, groupVersionList:content.group_version_list};
+	var data = {userId:this.uid, groupVersionList:content.groupVersionList};
 	var msgBuffer = IMGroupInfoListReq.encode(IMGroupInfoListReq.create(data)).finish();
 	var sendMsgApi = {callback:callback};
 	var sn = genSeqNum();
@@ -421,7 +396,7 @@ TeamTalkWebClient.prototype.handleGroupInfoRes = function(data) {
 //获信息列表
 TeamTalkWebClient.prototype.getMsgListApiAction = function(content,callback) {
 	var IMGetMsgListReq = IMMessage.lookupType('IM.Message.IMGetMsgListReq');
-	var data = {userId:this.uid, sessionType:content.session_type, sessionId:content.session_id,msgIdBegin:content.msg_id_begin,msgCnt:content.msg_cnt};
+	var data = {userId:this.uid, sessionType:content.sessionType, sessionId:content.sessionId,msgIdBegin:content.msgIdBegin,msgCnt:content.msgCnt};
 	var msgBuffer = IMGetMsgListReq.encode(IMGetMsgListReq.create(data)).finish();
 	var sendMsgApi = {callback:callback};
 	var sn = genSeqNum();
@@ -443,7 +418,7 @@ TeamTalkWebClient.prototype.handleResForMsgList = function(data) {
 //获取最近会话列表
 TeamTalkWebClient.prototype.getRecentlySession = function(content,callback){
 	var IMRecentContactSessionReq = IMBuddy.lookupType('IM.Buddy.IMRecentContactSessionReq');
-	var data = {userId:this.uid, latestUpdateTime:content.latest_update_time};
+	var data = {userId:this.uid, latestUpdateTime:content.latestUpdateTime};
 	var msgBuffer = IMRecentContactSessionReq.encode(IMRecentContactSessionReq.create(data)).finish();
 
 	var sendMsgApi = {callback:callback};
@@ -539,7 +514,7 @@ TeamTalkWebClient.prototype.handleUnReadMessageCnt = function(data) {
 //应答给服务端 读了这条消息
 TeamTalkWebClient.prototype.answerMsg = function(content,callback){
 	var IMMsgDataReadAck = IMMessage.lookupType('IM.Message.IMMsgDataReadAck');
-	var data = {userId:this.uid, sessionId:content.session_id,msgId:content.msg_id,sessionType:content.session_type};
+	var data = {userId:this.uid, sessionId:content.sessionId,msgId:content.msgId,sessionType:content.session_type};
 	var msgBuffer = IMMsgDataReadAck.encode(IMMsgDataReadAck.create(data)).finish();
 	var sendMsgApi = {callback:callback};
 	var sn = genSeqNum();
@@ -632,16 +607,16 @@ TeamTalkWebClient.prototype.simpleWorkForHandle = function(data) {
 
 
 //给指定群号发送一条消息
-TeamTalkWebClient.prototype.sendGroupTextMsg = function(text,group_id,callback) {
-	var content = {fromUserId:this.uid,toSessionId:group_id,msgData:text,msgType:MsgType.MSG_TYPE_GROUP_TEXT,msgId:local_msg_id,createTime:Date.parse(new Date())/ 1000};
-	local_msg_id++;
+TeamTalkWebClient.prototype.sendGroupTextMsg = function(text,groupId,callback) {
+	var content = {fromUserId:this.uid,toSessionId:groupId,msgData:text,msgType:MsgType.MSG_TYPE_GROUP_TEXT,msgId:localMsgId,createTime:Date.parse(new Date())/ 1000};
+	localMsgId++;
 	this.sendMsgApiAction(content,callback);
 }
 
 //给指定用户发送一条消息
-TeamTalkWebClient.prototype.sendSingleTextMsg = function(text,to_user_id,callback) {
-	var content = {fromUserId:this.uid,toSessionId:to_user_id,msgData:text,msgType:MsgType.MSG_TYPE_SINGLE_TEXT,msgId:local_msg_id,createTime:Date.parse(new Date())/ 1000};
-	local_msg_id++;
+TeamTalkWebClient.prototype.sendSingleTextMsg = function(text,toUserId,callback) {
+	var content = {fromUserId:this.uid,toSessionId:toUserId,msgData:text,msgType:MsgType.MSG_TYPE_SINGLE_TEXT,msgId:localMsgId,createTime:Date.parse(new Date())/ 1000};
+	localMsgId++;
 	this.sendMsgApiAction(content,callback);
 }
 
