@@ -1,3 +1,9 @@
+/**
+ * @file im.js
+ * @author xiaominfc
+ * @description connect to teamtalk webscoket server for chat
+ */
+
 'use strict';
 
 function HashMap(){  
@@ -6,7 +12,10 @@ function HashMap(){
 	this.Contains = function(key){return this.Get(key) == null?false:true};  
 	this.Remove = function(key){delete this[key]};  
 }
-
+/**
+ * store cache data for chat
+ * @type {Object}
+ */
 var imDb = {
 	initDb:function(uid) { 
 			   this.userDb = new HashMap;
@@ -129,6 +138,12 @@ function padText(source,count) {
     return source;
 }
 
+
+/**
+ * @description get length for chinse and english
+ * @param  {string} 
+ * @return {int}
+ */
 function getStringLength(str) {
     ///<summary>获得字符串实际长度，中文3，英文1</summary> utf8
     ///<param name="str">要获得长度的字符串</param>
@@ -141,10 +156,14 @@ function getStringLength(str) {
         //console.log(i  + '   :' + realLength);
     }
     return realLength;
-};
+}
 
 
-//aes加密
+/**
+ * @param  {string}
+ * @return {string}
+ * @description aes encrypt
+ */
 function aesEncryptText(text)
 {
 	var result = '';
@@ -162,7 +181,11 @@ function aesEncryptText(text)
 	return result;
 }
 
-//aes解密
+/**
+ * @param  {string}
+ * @return {string}
+ * @description aes decrypt
+ */
 function aesDecryptText(data)
 {
 	if(typeof data != 'string') {
@@ -189,6 +212,11 @@ function aesDecryptText(data)
 	return text;
 }
 
+/**
+ * @param  {WebSocket}
+ * @param  {TeamTalkWebClient}
+ * @description listen some thing for websocket and bind to client
+ */
 function bindWebsocketForClinet(wsSocket, client) {
 	wsSocket.binaryType = "arraybuffer";
 	wsSocket.onopen = function(event) {
@@ -250,29 +278,47 @@ var TeamTalkWebClient = function(config) {
 	this.websocketUrl = config.wsurl;
 	this.clientState = UserStatType.USER_STATUS_OFFLINE;
 	this.logined = false;
-	this.connection();
-}
+	this.connect();
+};
 
-TeamTalkWebClient.prototype.connection = function() {
+/**
+ * @description connet to server
+ */
+TeamTalkWebClient.prototype.connect = function() {
 	if(!!this.websocket) {
 		this.websocket.close();
 	}
 	this.websocket = new WebSocket(this.websocketUrl);
 	bindWebsocketForClinet(this.websocket,this);
-}
+};
 
+/**
+ * @return state for ready
+ * @description check wesocket is opened and pb is loaded
+ */
 TeamTalkWebClient.prototype.wsIsReady = function(){
 	if(this.websocket) {
 		return this.websocket.readyState == 1 && IMBaseDefine && IMLogin && IMMessage && IMGroup && IMBuddy && IMOther;
 	}
 	return false;
-}
+};
 
+
+/**
+ * @param  {ArrayBuffer}
+ * @return {nil}
+ * @description send data by websocket
+ */
 TeamTalkWebClient.prototype.sendBinaryData = function(binaryData){
 	this.websocket.send(binaryData);	
-}
+};
 
-//登录
+/**
+ * @param  {object} info.username info.password	
+ * @param  {Function} callback
+ * @return {NULL}
+ * @description do action for login im
+ */
 TeamTalkWebClient.prototype.loginAction = function(info,callback) {
 	//var LoginReq = IMLogin.build('IM.Login.IMLoginReq');
 	var LoginReq = IMLogin.lookupType('IM.Login.IMLoginReq');
@@ -291,7 +337,7 @@ TeamTalkWebClient.prototype.loginAction = function(info,callback) {
 	apiHashMap.Set(sn,sendMsgApi);
     var buffer = buildPackage(msgBuffer,ServiceID.SID_LOGIN,LoginCmdID.CID_LOGIN_REQ_USERLOGIN,sn);
 	this.sendBinaryData(buffer);
-}
+};
 
 
 TeamTalkWebClient.prototype.handleResForLogin = function(data) {
@@ -310,13 +356,13 @@ TeamTalkWebClient.prototype.handleResForLogin = function(data) {
 			loginApi.callback(false,msg.resultString);
 		}
 	}
-}
+};
 
 TeamTalkWebClient.prototype.relogin = function(callback) {
 	if(!!this.loginInfo) {
 		this.loginAction(this.loginInfo,callback);
 	}
-}
+};
 
 
 //发消息的api 
@@ -332,7 +378,7 @@ TeamTalkWebClient.prototype.sendMsgApiAction = function(msg,callback) {
 	apiHashMap.Set(sn,api);
     var buffer = buildPackage(msgBuffer,ServiceID.SID_MSG,MessageCmdID.CID_MSG_DATA,sn);
 	this.sendBinaryData(buffer);
-}
+};
 
 
 //消息发送到服务器成功(服务器反馈)
@@ -345,7 +391,7 @@ TeamTalkWebClient.prototype.handleResForMsgAck = function(data) {
 		sendMsgApi.callback(true,sendMsgApi.msg);
 		apiHashMap.Remove(data.seqNum);
 	}
-}
+};
 
 
 //获取群列表
@@ -358,7 +404,7 @@ TeamTalkWebClient.prototype.getGroupListApiAction = function(callback) {
 	apiHashMap.Set(sn,sendMsgApi);
 	var buffer = buildPackage(msgBuffer,ServiceID.SID_GROUP,GroupCmdID.CID_GROUP_NORMAL_LIST_REQUEST,sn);
 	this.sendBinaryData(buffer);
-}
+};
 
 //处理服务端返回的群列表
 TeamTalkWebClient.prototype.handleGroupNormalList = function(data) {
@@ -368,7 +414,7 @@ TeamTalkWebClient.prototype.handleGroupNormalList = function(data) {
 	rsp.seqNum = data.seqNum;
 	rsp.content = msg;
 	this.simpleWorkForHandle(rsp);
-}
+};
 
 
 //获取群详情
@@ -381,7 +427,7 @@ TeamTalkWebClient.prototype.getGroupInfoApiAction = function(content,callback) {
 	apiHashMap.Set(sn,sendMsgApi);
 	var buffer = buildPackage(msgBuffer,ServiceID.SID_GROUP,GroupCmdID.CID_GROUP_INFO_REQUEST,sn);
 	this.sendBinaryData(buffer);
-}
+};
 
 //处理服务端返回的群详情
 TeamTalkWebClient.prototype.handleGroupInfoRes = function(data) {
@@ -391,7 +437,7 @@ TeamTalkWebClient.prototype.handleGroupInfoRes = function(data) {
 	rsp.seqNum = data.seqNum;
 	rsp.content = msg;
 	this.simpleWorkForHandle(rsp);   
-}
+};
 
 //获信息列表
 TeamTalkWebClient.prototype.getMsgListApiAction = function(content,callback) {
@@ -403,7 +449,7 @@ TeamTalkWebClient.prototype.getMsgListApiAction = function(content,callback) {
 	apiHashMap.Set(sn,sendMsgApi);
 	var buffer = buildPackage(msgBuffer,ServiceID.SID_MSG,MessageCmdID.CID_MSG_LIST_REQUEST,sn);
 	this.sendBinaryData(buffer);
-}
+};
 
 //处理服务端应答回来的消息列表
 TeamTalkWebClient.prototype.handleResForMsgList = function(data) {
@@ -413,7 +459,7 @@ TeamTalkWebClient.prototype.handleResForMsgList = function(data) {
 	rsp.seqNum = data.seqNum;
 	rsp.content = msg;
 	this.simpleWorkForHandle(rsp);   
-}
+};
 
 //获取最近会话列表
 TeamTalkWebClient.prototype.getRecentlySession = function(content,callback){
@@ -426,7 +472,7 @@ TeamTalkWebClient.prototype.getRecentlySession = function(content,callback){
 	apiHashMap.Set(sn,sendMsgApi);
 	var buffer = buildPackage(msgBuffer,ServiceID.SID_BUDDY_LIST ,BuddyListCmdID.CID_BUDDY_LIST_RECENT_CONTACT_SESSION_REQUEST,sn);
 	this.sendBinaryData(buffer);
-}
+};
 
 
 TeamTalkWebClient.prototype.handleResForRecentlySession = function(data)
@@ -437,7 +483,7 @@ TeamTalkWebClient.prototype.handleResForRecentlySession = function(data)
 	rsp.seqNum = data.seqNum;
 	rsp.content = msg;
 	this.simpleWorkForHandle(rsp);  
-}
+};
 
 
 
@@ -452,7 +498,7 @@ TeamTalkWebClient.prototype.getAllFriends = function(content,callback){
 	apiHashMap.Set(sn,sendMsgApi);
 	var buffer = buildPackage(msgBuffer,ServiceID.SID_BUDDY_LIST ,BuddyListCmdID.CID_BUDDY_LIST_ALL_USER_REQUEST,sn);
 	this.sendBinaryData(buffer);
-}
+};
 
 
 TeamTalkWebClient.prototype.handleResForAllFriends = function(data) {
@@ -462,7 +508,7 @@ TeamTalkWebClient.prototype.handleResForAllFriends = function(data) {
 	rsp.seqNum = data.seqNum;
 	rsp.content = msg;
 	this.simpleWorkForHandle(rsp); 
-}
+};
 
 //获取好友信息
 TeamTalkWebClient.prototype.getFriendsByIds = function(ids,callback) {
@@ -477,7 +523,7 @@ TeamTalkWebClient.prototype.getFriendsByIds = function(ids,callback) {
 	apiHashMap.Set(sn,sendMsgApi);
 	var buffer = buildPackage(msgBuffer,ServiceID.SID_BUDDY_LIST ,BuddyListCmdID.CID_BUDDY_LIST_USER_INFO_REQUEST,sn);
 	this.sendBinaryData(buffer);
-}
+};
 
 
 TeamTalkWebClient.prototype.handleResForFriendsByIds = function(data){
@@ -487,7 +533,7 @@ TeamTalkWebClient.prototype.handleResForFriendsByIds = function(data){
 	rsp.seqNum = data.seqNum;
 	rsp.content = msg;
 	this.simpleWorkForHandle(rsp); 
-}
+};
 
 //获取未读消息
 TeamTalkWebClient.prototype.getUnreadMessageCnt = function(content,callback){
@@ -499,7 +545,7 @@ TeamTalkWebClient.prototype.getUnreadMessageCnt = function(content,callback){
 	apiHashMap.Set(sn,sendMsgApi);
 	var buffer = buildPackage(msgBuffer ,ServiceID.SID_MSG ,MessageCmdID.CID_MSG_UNREAD_CNT_REQUEST,sn);
 	this.sendBinaryData(buffer);
-}
+};
 
 TeamTalkWebClient.prototype.handleUnReadMessageCnt = function(data) {
 	var IMUnreadMsgCntRsp = IMMessage.lookupType('IM.Message.IMUnreadMsgCntRsp');
@@ -508,7 +554,7 @@ TeamTalkWebClient.prototype.handleUnReadMessageCnt = function(data) {
 	rsp.seqNum = data.seqNum;
 	rsp.content = msg;
 	this.simpleWorkForHandle(rsp);
-}
+};
 
 
 //应答给服务端 读了这条消息
@@ -521,7 +567,7 @@ TeamTalkWebClient.prototype.answerMsg = function(content,callback){
 	apiHashMap.Set(sn,sendMsgApi);
 	var buffer = buildPackage(msgBuffer,ServiceID.SID_MSG ,MessageCmdID.CID_MSG_READ_ACK,sn);
 	this.sendBinaryData(buffer);
-}
+};
 
 //应答来自服务端的心跳包
 TeamTalkWebClient.prototype.answerHeartBeat = function()
@@ -530,7 +576,7 @@ TeamTalkWebClient.prototype.answerHeartBeat = function()
 	var msgBuffer = IMHeartBeat.encode(IMHeartBeat.create({})).finish();
 	var buffer = buildPackage(msgBuffer,ServiceID.SID_OTHER,OtherCmdID.CID_OTHER_HEARTBEAT,sn);
 	this.sendBinaryData(buffer);
-}
+};
 
 
 
@@ -574,7 +620,7 @@ TeamTalkWebClient.prototype.handleEventData = function(data) {
 			console.log("data:" + JSON.stringify(data));
 			break;
 	}
-}
+};
 
 
 
@@ -588,7 +634,7 @@ TeamTalkWebClient.prototype.handleResForNewMsg = function(data) {
 			this.msgHandler(msg);
 		}
 	}
-}
+};
 
 
 
@@ -603,7 +649,7 @@ TeamTalkWebClient.prototype.simpleWorkForHandle = function(data) {
 			apiHashMap.Remove(data.seqNum);    
 		}
 	}
-}
+};
 
 
 //给指定群号发送一条消息
@@ -611,18 +657,18 @@ TeamTalkWebClient.prototype.sendGroupTextMsg = function(text,groupId,callback) {
 	var content = {fromUserId:this.uid,toSessionId:groupId,msgData:text,msgType:MsgType.MSG_TYPE_GROUP_TEXT,msgId:localMsgId,createTime:Date.parse(new Date())/ 1000};
 	localMsgId++;
 	this.sendMsgApiAction(content,callback);
-}
+};
 
 //给指定用户发送一条消息
 TeamTalkWebClient.prototype.sendSingleTextMsg = function(text,toUserId,callback) {
 	var content = {fromUserId:this.uid,toSessionId:toUserId,msgData:text,msgType:MsgType.MSG_TYPE_SINGLE_TEXT,msgId:localMsgId,createTime:Date.parse(new Date())/ 1000};
 	localMsgId++;
 	this.sendMsgApiAction(content,callback);
-}
+};
 
 //定义的一些常量以及枚举
-var DD_MESSAGE_IMAGE_PREFIX = "&$#@~^@[{:"
-var DD_MESSAGE_IMAGE_SUFFIX = ":}]&$~@#@"
+var DD_MESSAGE_IMAGE_PREFIX = "&$#@~^@[{:";
+var DD_MESSAGE_IMAGE_SUFFIX = ":}]&$~@#@";
 
 var UserStatType = {
 	USER_STATUS_ONLINE : 1,
