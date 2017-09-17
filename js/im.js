@@ -245,9 +245,9 @@ function bindWebsocketForClinet(wsSocket, client) {
 		if(!window.navigator.onLine)
 		{
 			client.clientState = UserStatType.USER_STATUS_OFFLINE;
-			client.connection();
+			client.connect();
 		}else if(client.logined) {
-			client.connection();
+			client.connect();
 		}
 	}
 }
@@ -441,8 +441,10 @@ TeamTalkWebClient.prototype.handleGroupInfoRes = function(data) {
 
 //获信息列表
 TeamTalkWebClient.prototype.getMsgListApiAction = function(content,callback) {
+	console.log('getMsgListApiAction');
 	var IMGetMsgListReq = IMMessage.lookupType('IM.Message.IMGetMsgListReq');
 	var data = {userId:this.uid, sessionType:content.sessionType, sessionId:content.sessionId,msgIdBegin:content.msgIdBegin,msgCnt:content.msgCnt};
+	console.log(data);
 	var msgBuffer = IMGetMsgListReq.encode(IMGetMsgListReq.create(data)).finish();
 	var sendMsgApi = {callback:callback};
 	var sn = genSeqNum();
