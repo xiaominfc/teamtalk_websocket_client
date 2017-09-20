@@ -12,7 +12,8 @@ var mainView = myApp.addView('.view-main', {
 	dynamicNavbar: true
 });
 
-var client = new TeamTalkWebClient({wsurl:'ws://im.xiaominfc.com:9090'});
+//var client = new TeamTalkWebClient({wsurl:'wss://ws.xiaominfc.com:9091'}); //ssl 支持
+var client = new TeamTalkWebClient({wsurl:'ws://ws.xiaominfc.com:9090'});
 //client.connection();
 
 myApp.onPageAfterAnimation('chatmain', function (page) {
@@ -411,7 +412,8 @@ myApp.onPageInit('chatmain', function (page) {
 				if(state) {
 					console.log('send ok:' + JSON.stringify(res)); 
 					res.userId = res.fromUserId;
-					res.msgData = Base64.encode(res.msgData);
+					res.fromSessionId = res.fromUserId;
+					res.msgData = Base64.decode(res.msgData);//发送的时候被base64了一次 所以要解回来
 					res.type = res.msgType;
 					res.sessionId = res.toSessionId;
 					var key = currentSession.sessionType + '_' + currentSession.sessionId;
@@ -421,10 +423,11 @@ myApp.onPageInit('chatmain', function (page) {
 		}else {
 			client.sendSingleTextMsg(messageText,currentSession.sessionId,function(state,res){
 				if(state) {
-					console.log(res);
-					//console.log('send ok:' + JSON.stringify(res)); 
+					//console.log(res);
+					console.log('send ok:' + JSON.stringify(res)); 
 					res.userId = res.fromUserId;
-					res.msgData = Base64.encode(res.msgData);
+					res.fromSessionId = res.fromUserId;
+					res.msgData = Base64.decode(res.msgData);//发送的时候被base64了一次 所以要解回来
 					res.type = res.msgType;
 					res.sessionId = res.toSessionId;
 					var key = currentSession.sessionType + '_' + currentSession.sessionId;
@@ -455,7 +458,7 @@ function playSound(soundBuffer) {
 
 function loadMsgForChatMain(msgs,messagesContainer) {
 	var nullUserIds = [];
-
+//	console.log(msgs);
 	for(var i in msgs) {
 		if(msgs[i].msgId > currentSession.currentMsgId){
 			currentSession.currentMsgId = msgs[i].msgId;
