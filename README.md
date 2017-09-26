@@ -26,7 +26,7 @@ location / {
 
 ```
 2017-08-22
-重构了代码，使用0.68版的protobuf.js(https://github.com/dcodeIO/protobuf.js)
+重构了代码，使用6.8.0版的protobuf.js(https://github.com/dcodeIO/protobuf.js)
 ```
 
 
