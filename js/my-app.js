@@ -90,13 +90,17 @@ function bindDataToContactlist(){
 			continue;
 		}
 		var item = '<li class="item-content item-link user-action" value="'+ user.userId +'">' + 
-			'<div class="item-media"><img src="'+ user.avatarUrl + '" class="avatar" ></div>' +
+			'<div class="item-media"><img src="'+ user.avatarUrl + '" class="avatar"></div>' +
 			'<div class="item-inner">' +
 			'<div class="item-title">' + user.userNickName +'</div>' +
 			'</div></li>';
 		html = html + item;
 	}
+
 	$$('#contact-list').html(html);
+	$$('.avatar').on('error',function(ele){
+		this.src="./res/imgs/veno.png";
+	});
 	$$('.user-action').on('click',function(ele){
 		var user = imDb.getUserbyId(this.value);
 		currentSession.title = user.userNickName;
@@ -120,6 +124,7 @@ function bindDataToGrouplist(){
 			'</div></li>';
 		html = html + item;
 	}
+	//console.log(html);
 	$$('#group-list').html(html);
 	$$('.group-action').on('click',function(ele){
 		var groupInfo = imDb.getAllGroupList()[this.value];
@@ -203,13 +208,17 @@ function bindSessions(autoRemove){
 
 		var sessionTag = 'unread_' + session.sessionType + '_' + session.sessionId;
 		var item = '<li class="item-content item-link session-action" value="'+ i +'">' + 
-			'<div class="item-media"><img src="'+ sessionAvatar + '" class="avatar" ></div>' +
+			'<div class="item-media"><img src="'+ sessionAvatar + '" class="avatar"></div>' +
 			'<div class="item-inner">' +
 			'<div class="item-title">' + sessionName + '<div class="label">' + text +'</div></div>' +'<div class="item-after" id="' + sessionTag +'"></div>' +
 			'</div></li>';
 		html = html + item;
 	}
 	$$('#session-list').html(html);
+
+	$$('.avatar').on('error',function(ele){
+		this.src="./res/imgs/veno.png";
+	});
 
 	$$('.session-action').on('click',function(ele){
 		//console.log(this.value);
