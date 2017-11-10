@@ -468,7 +468,6 @@ TeamTalkWebClient.prototype.getRecentlySession = function(content,callback){
 	var IMRecentContactSessionReq = IMBuddy.lookupType('IM.Buddy.IMRecentContactSessionReq');
 	var data = {userId:this.uid, latestUpdateTime:content.latestUpdateTime};
 	var msgBuffer = IMRecentContactSessionReq.encode(IMRecentContactSessionReq.create(data)).finish();
-
 	var sendMsgApi = {callback:callback};
 	var sn = genSeqNum();
 	apiHashMap.Set(sn,sendMsgApi);

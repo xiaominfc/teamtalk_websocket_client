@@ -274,6 +274,8 @@ function bindSessions(autoRemove){
 }
 
 function loadRecentlySession(){
+
+	
 	if(imDb.sessionList) {
 		bindSessions(false);
 	}else {
