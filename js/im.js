@@ -242,6 +242,7 @@ function bindWebsocketForClinet(wsSocket, client) {
 	}
 
 	wsSocket.onclose = function(event) {
+		console.log("websocket onclose");
 		if(!window.navigator.onLine)
 		{
 			client.clientState = UserStatType.USER_STATUS_OFFLINE;
@@ -352,6 +353,16 @@ TeamTalkWebClient.prototype.handleResForLogin = function(data) {
 			this.uid = msg.userInfo.userId;
 			this.user = msg.userInfo;
 			loginApi.callback(true,msg.userInfo);
+
+			if(this.heartBeatTimer) {
+				clearInterval(this.heartBeatTimer)
+			}
+			var _this = this;
+			_this.sendHeartBeat();
+			this.heartBeatTimer = setInterval(function() {
+				console.log("send heartBeat");
+  				_this.sendHeartBeat();
+			}, 45 * 1000);//45秒发送一次心跳包
 		}else {
 			loginApi.callback(false,msg.resultString);
 		}
@@ -571,12 +582,26 @@ TeamTalkWebClient.prototype.answerMsg = function(content,callback){
 };
 
 //应答来自服务端的心跳包
-TeamTalkWebClient.prototype.answerHeartBeat = function()
+TeamTalkWebClient.prototype.sendHeartBeat = function()
 {
+	
 	var IMHeartBeat = IMOther.lookupType('IM.Other.IMHeartBeat');
 	var msgBuffer = IMHeartBeat.encode(IMHeartBeat.create({})).finish();
+	var sn = genSeqNum();
 	var buffer = buildPackage(msgBuffer,ServiceID.SID_OTHER,OtherCmdID.CID_OTHER_HEARTBEAT,sn);
 	this.sendBinaryData(buffer);
+	
+};
+
+
+//应答来自服务端的心跳包
+TeamTalkWebClient.prototype.answerHeartBeat = function()
+{
+	console.log("get answer heartBeat");
+	// var IMHeartBeat = IMOther.lookupType('IM.Other.IMHeartBeat');
+	// var msgBuffer = IMHeartBeat.encode(IMHeartBeat.create({})).finish();
+	// var buffer = buildPackage(msgBuffer,ServiceID.SID_OTHER,OtherCmdID.CID_OTHER_HEARTBEAT,sn);
+	// this.sendBinaryData(buffer);
 };
 
 
