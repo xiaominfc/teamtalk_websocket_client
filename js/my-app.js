@@ -336,7 +336,16 @@ function loadNewMsgToChatMain(newMsg){
 		var data  = newMsg.msgData;
 		playSound(data.slice(4));
 	});
-	client.answerMsg({sessionType:currentSession.sessionType,sessionId:newMsg.toSessionId,msgId:newMsg.msgId},function(state,res){
+	console.log(newMsg);
+
+	
+	sessionId = newMsg.fromUserId;
+	if(newMsg.type == MsgType.MSG_TYPE_GROUP_TEXT || newMsg.type == MsgType.MSG_TYPE_GROUP_AUDIO) {
+		sessionId = newMsg.toSessionId;
+	}
+
+
+	client.answerMsg({sessionType:currentSession.sessionType,sessionId:sessionId,msgId:newMsg.msgId},function(state,res){
 		console.log('finish answer:' + JSON.stringify(res));
 	});
 }
@@ -524,6 +533,8 @@ function loadMsgForChatMain(msgs,messagesContainer) {
 		var data  = msgs[index].msgData;
 		playSound(data.slice(4));
 	});
+
+
 
 	client.answerMsg({sessionType:currentSession.sessionType,sessionId:currentSession.sessionId,msgId:currentSession.currentMsgId},function(state,res){
 		console.log('finish answer:' + JSON.stringify(res));
