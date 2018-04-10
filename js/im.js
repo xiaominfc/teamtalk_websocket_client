@@ -571,10 +571,8 @@ TeamTalkWebClient.prototype.handleUnReadMessageCnt = function(data) {
 
 //应答给服务端 读了这条消息
 TeamTalkWebClient.prototype.answerMsg = function(content,callback){
-	console.log(content);
 	var IMMsgDataReadAck = IMMessage.lookupType('IM.Message.IMMsgDataReadAck');
 	var data = {userId:this.uid, sessionId:content.sessionId,msgId:content.msgId,sessionType:content.sessionType};
-	console.log(data);
 	var msgBuffer = IMMsgDataReadAck.encode(IMMsgDataReadAck.create(data)).finish();
 	var sendMsgApi = {callback:callback};
 	var sn = genSeqNum();
