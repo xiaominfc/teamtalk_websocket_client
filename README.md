@@ -36,3 +36,9 @@ location / {
 原来的是speex。speex自己的官网上也说用Opus来替代speex，Opus比speex更好。
 客户端的具体替换可以查看我维护的TeamTalk的工程(https://github.com/xiaominfc/TeamTalk)
 ```
+
+```
+2018-04-10
+添加心跳包的发送 保活时间更长
+
+```
