@@ -297,9 +297,10 @@ function loadNewMsgToChatMain(newMsg){
 	}else {
 		msg.name = senderId;
 		msg.avatar = '';
-	}
+    }
+    console.log(newMsg);
 	var text = aesDecryptText(newMsg.msgData);
-	console.log('text:' + text);
+    
 	if(newMsg.type == MsgType.MSG_TYPE_GROUP_TEXT || newMsg.type == MsgType.MSG_TYPE_SINGLE_TEXT) {
 		if(text.indexOf(DD_MESSAGE_IMAGE_PREFIX) == 0) {
 
@@ -326,7 +327,7 @@ function loadNewMsgToChatMain(newMsg){
 		msg.type = 'received';
 	}
 	msg.senderId = senderId;
-	var time = new Date(newMsg.created * 1000).toLocaleString().split(', ');
+	var time = new Date(newMsg.createTime * 1000).toLocaleString().split(', ');
 	msg.day = time[0];
 	msg.time = time[1];
 
