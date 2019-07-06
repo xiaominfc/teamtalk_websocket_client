@@ -1,6 +1,6 @@
 # teamtalk_websocket_client
 
-[在线demo](http://chat.xiaominfc.com/im)
+[在线demo](http://im.xiaominfc.com)
 
 
 
