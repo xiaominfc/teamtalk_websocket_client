@@ -557,9 +557,7 @@ function showHome(){
 
 
 function doLogin(formData){
-    var imLoginData = {username:formData.username,password:md5(formData.password)};
-    imLoginData={username:'60714', password:'6CEBE4E4F5867246388A3C67728EA77A'}
-	console.log(imLoginData);
+	var imLoginData = {username:formData.username,password:md5(formData.password)};
 	client.loginAction(imLoginData,function(state,resData){
 		if(state) {
 			imDb.initDb(client.uid);
