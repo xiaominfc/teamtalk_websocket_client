@@ -498,8 +498,8 @@ function loadMsgForChatMain(msgs,messagesContainer) {
 			}
 		}else {
 			var dv = new DataView(msgs[i].msgData.slice(0,4).buffer);
-			var audioTime = 0
-			if(dv.byteLength > 0 ) {
+			var audioTime = '0秒'
+			if(dv.byteLength > 3 ) {
 				audioTime = dv.getUint32(0) + '秒';
 			}
 			msg.text = "<div class='audio-item' value="+i+" >[语音:" + audioTime +"]</div>";    
