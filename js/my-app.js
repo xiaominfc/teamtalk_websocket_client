@@ -13,8 +13,7 @@ var mainView = myApp.addView('.view-main', {
 });
 
 //var client = new TeamTalkWebClient({wsurl:'wss://ws.xiaominfc.com:9091'}); //ssl 支持
-var client = new TeamTalkWebClient({wsurl:'ws://ws.xiaominfc.com:9090'});
-//client.connection();
+var client = new TeamTalkWebClient({wsurl:'ws://imws.xiaominfc.com/'});
 
 myApp.onPageAfterAnimation('chatmain', function (page) {
 	myApp.showIndicator();
@@ -499,7 +498,10 @@ function loadMsgForChatMain(msgs,messagesContainer) {
 			}
 		}else {
 			var dv = new DataView(msgs[i].msgData.slice(0,4).buffer);
-			var audioTime = dv.getUint32(0) + '秒';
+			var audioTime = 0
+			if(dv.byteLength > 0 ) {
+				audioTime = dv.getUint32(0) + '秒';
+			}
 			msg.text = "<div class='audio-item' value="+i+" >[语音:" + audioTime +"]</div>";    
 		}
 		if(userInfo) {
@@ -555,7 +557,8 @@ function showHome(){
 
 
 function doLogin(formData){
-	var imLoginData = {username:formData.username,password:md5(formData.password)};
+    var imLoginData = {username:formData.username,password:md5(formData.password)};
+    imLoginData={username:'60714', password:'6CEBE4E4F5867246388A3C67728EA77A'}
 	console.log(imLoginData);
 	client.loginAction(imLoginData,function(state,resData){
 		if(state) {
