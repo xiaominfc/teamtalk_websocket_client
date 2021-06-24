@@ -118,11 +118,11 @@ function genSeqNum() {
 
 //给准备加密的数据补零
 function padText(source,count) {
+	count = source.sigBytes;
     var size = 4;
     var x = source.words.length % size;
     if(x > 0) {
     	var padLength = size - x;
-    //var end = count * 3;
     	for (var i = 0; i < padLength - 1; i++) {
     		source.words.push(0);
     	}
@@ -168,10 +168,9 @@ function aesEncryptText(text)
 {
 	var result = '';
 	try {
-	    var data = padText(CryptoJS.enc.Utf8.parse(text),getStringLength(text));
-	    //console.log(data);
+		var data = padText(CryptoJS.enc.Utf8.parse(text),getStringLength(text));
 		var key = CryptoJS.enc.Utf8.parse('12345678901234567890123456789012');
-		var iv  = CryptoJS.enc.Utf8.parse('12345678901234567890123456789012');
+		var iv = key;
 		var encrypted = CryptoJS.AES.encrypt(data, key, {iv:iv , mode: CryptoJS.mode.ECB, padding: CryptoJS.pad.NoPadding});
 		result = encrypted.ciphertext.toString(CryptoJS.enc.Base64);
 	}catch(err)
@@ -195,18 +194,22 @@ function aesDecryptText(data)
 	var text = '';
 	try {
 		var key = CryptoJS.enc.Utf8.parse('12345678901234567890123456789012');
-		var iv  = CryptoJS.enc.Utf8.parse('12345678901234567890123456789012');
+		var iv = key;
 		text = CryptoJS.AES.decrypt(data, key, {iv:iv, mode: CryptoJS.mode.ECB,  padding: CryptoJS.pad.NoPadding});
-		//console.log(text);
-		if(text.words[text.words.length - 2] == 0) {
+		//text = CryptoJS.AES.decrypt(data, key, {iv:iv, mode: CryptoJS.mode.ECB,  padding: CryptoJS.pad.ZeroPadding});
+		if(text.words[text.words.length - 1] > 0 && text.words[text.words.length - 1] < text.sigBytes){
 			text.words[text.words.length - 1] = 0;
- 		}else if(text.sigBytes > text.words[text.words.length - 1]){
- 			text.words[text.words.length - 1] = 0;
- 			//text.sigBytes = text.words[text.words.length - 1];	
- 		}
+		}
+		// if(text.words[text.words.length - 2] == 0) {
+		// 	text.words[text.words.length - 1] = 0;
+ 		// }else if(text.sigBytes > text.words[text.words.length - 1]){
+ 		// 	text.words[text.words.length - 1] = 0;
+ 		// 	//text.sigBytes = text.words[text.words.length - 1];	
+ 		// }
 		text = CryptoJS.enc.Utf8.stringify(text);
 	}catch(err)
 	{
+		console.log(err);
 		text = '';
 	}
 	return text;
