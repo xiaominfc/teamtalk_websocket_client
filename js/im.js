@@ -114,28 +114,27 @@ function genSeqNum() {
 	return actionSeqNum;
 }
 
-
-
 //给准备加密的数据补零
-function padText(source,count) {
-	count = source.sigBytes;
-    var size = 4;
-    var x = source.words.length % size;
-    if(x > 0) {
-    	var padLength = size - x;
-    	for (var i = 0; i < padLength - 1; i++) {
-    		source.words.push(0);
-    	}
-    	source.words.push(count);		
-    }else {
+function padText(source,count){
+	if(source.sigBytes > count){
+		count = source.sigBytes;
+	}
+	var size = 4;
+	var x = source.words.length % size;
+	if(x > 0) {
+		var padLength = size - x;
+		for (var i = 0; i < padLength - 1; i++) {
+			source.words.push(0);
+		}
+		source.words.push(count);		
+	}else {
 		source.words.push(0);
 		source.words.push(0);
 		source.words.push(0);
 		source.words.push(count);
 	}
-    
-    source.sigBytes = 4 * source.words.length;
-    return source;
+	source.sigBytes = 4 * source.words.length;
+	return source;
 }
 
 
@@ -180,6 +179,81 @@ function aesEncryptText(text)
 	return result;
 }
 
+
+
+/**
+ * @description 递归的方式 最后开始置0 尝试
+ * @param {WordArray} source 
+ * @param {number} bit_code 
+ * @param {number} time 
+ * @returns text
+ */
+function utf8_stringify(source,bit_code=0xf,time = 8){
+	if(time > 0){
+		console.log("decode failed");
+		return "";
+	}
+	try{
+		source.words[text.words.length - 1] = source.words[source.words.length - 1] & (0xffffffff - bit_code);
+		source.sigBytes = text.sigBytes - 4;
+		var text = CryptoJS.enc.Utf8.stringify(source);
+		return text;
+	}catch(err){
+		bit_code = (bit_code << 4) + 0xf;
+		return utf8_stringify(source,bit_code);
+	}
+}
+
+
+function getSourceCharByIndex(source ,index){
+	var bit_offset = (index % 4)
+	var offset = 3 - bit_offset;
+	var word = source.words[parseInt(index / 4)];
+	while(offset > 0){
+		word = word >> 8;
+		offset = offset -1
+	}
+	return (word & 0xff);
+}
+
+/**
+ * @description 根据字节内容 得出对应utf8字符的长度
+ * @param {char} c 
+ * @returns number
+ */
+function offsetForChar(c){
+	var utf8_chars = [0xfd,0xfb, 0xf7,0xef,0xdf, 0x7f]
+	var i = 0;
+	for(; i < utf8_chars.length; i ++){
+		if((utf8_chars[i] & c) == c){
+			break;
+		}
+	}
+	return 6 - i;
+}
+
+/**
+ * @description reset format for utf8
+ * @param {WordArray} source 
+ * @returns {WordArray} source
+ */
+function utf8_format(source){
+
+	var offset = 0;
+	var index = 0;
+	do{
+		index = index + offset;
+		var c = getSourceCharByIndex(source,index);
+		offset = offsetForChar(c)
+		if(offset == 0) {
+			return source;
+		}
+	}while(offset + index < source.sigBytes)
+	source.sigBytes = index;
+	return source;
+}
+
+
 /**
  * @param  {string}
  * @return {string}
@@ -191,26 +265,34 @@ function aesDecryptText(data)
 		var base64String = window.btoa(String.fromCharCode.apply(null, data));
 		data = Base64.decode(base64String);
 	}
+	var source;
 	var text = '';
 	try {
 		var key = CryptoJS.enc.Utf8.parse('12345678901234567890123456789012');
 		var iv = key;
-		text = CryptoJS.AES.decrypt(data, key, {iv:iv, mode: CryptoJS.mode.ECB,  padding: CryptoJS.pad.NoPadding});
-		//text = CryptoJS.AES.decrypt(data, key, {iv:iv, mode: CryptoJS.mode.ECB,  padding: CryptoJS.pad.ZeroPadding});
-		if(text.words[text.words.length - 1] > 0 && text.words[text.words.length - 1] < text.sigBytes){
-			text.words[text.words.length - 1] = 0;
+		source = CryptoJS.AES.decrypt(data, key, {iv:iv, mode: CryptoJS.mode.ECB,  padding: CryptoJS.pad.NoPadding});
+		if(source.words[text.words.length - 1] > 0 && source.words[text.words.length - 1] < source.sigBytes){
+			source.words[text.words.length - 1] = 0;
 		}
-		// if(text.words[text.words.length - 2] == 0) {
-		// 	text.words[text.words.length - 1] = 0;
- 		// }else if(text.sigBytes > text.words[text.words.length - 1]){
- 		// 	text.words[text.words.length - 1] = 0;
- 		// 	//text.sigBytes = text.words[text.words.length - 1];	
- 		// }
-		text = CryptoJS.enc.Utf8.stringify(text);
+		text = CryptoJS.enc.Utf8.stringify(source);
 	}catch(err)
 	{
-		console.log(err);
-		text = '';
+		try{
+			//得出最大解析串
+			source = utf8_format(source);
+			text = CryptoJS.enc.Utf8.stringify(source);
+		}catch(err){
+			var offset = parseInt((source.words.length*4-source.sigBytes)/4);
+			var bit_code = 0x0;
+			while(offset > 0){
+				console.log(offset);
+				bit_code = (bit_code << 4) + 0xf;
+				offset = offset - 1;
+			}
+			source.words[source.words.length - 1] = source.words[source.words.length - 1] & (0xffffffff - bit_code);
+			bit_code = (bit_code << 4) + 0xf;
+			text = utf8_stringify(source,bit_code);
+		}
 	}
 	return text;
 }
@@ -258,8 +340,6 @@ function bindWebsocketForClinet(wsSocket, client) {
 
 function buildPackage(req,serviceId,commandId,seqNum)
 {
-
-
 	var length = req.byteLength + 16;		
 	var buffer = new ArrayBuffer(length);
 	var dv = new DataView(buffer, 0);
@@ -270,9 +350,8 @@ function buildPackage(req,serviceId,commandId,seqNum)
 	dv.setUint16(10,commandId);
 	dv.setUint16(12,seqNum);
 	dv.setUint16(14,0);
-
-	 var tmp = new Uint8Array(buffer);
-	 tmp.set(new Uint8Array(req),16);
+	var tmp = new Uint8Array(buffer);
+	tmp.set(new Uint8Array(req),16);
 	return buffer;
 }
 
