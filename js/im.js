@@ -237,7 +237,7 @@ function offsetForChar(c){
  * @param {WordArray} source 
  * @returns {WordArray} source
  */
-function utf8_format(source){
+function utf8ReFormat(source){
 
 	var offset = 0;
 	var index = 0;
@@ -277,9 +277,10 @@ function aesDecryptText(data)
 		text = CryptoJS.enc.Utf8.stringify(source);
 	}catch(err)
 	{
+		//以前网页端加密编码存在一定问题 导致解密异常 所以实现下列代码修复
 		try{
 			//得出最大解析串
-			source = utf8_format(source);
+			source = utf8ReFormat(source);
 			text = CryptoJS.enc.Utf8.stringify(source);
 		}catch(err){
 			var offset = parseInt((source.words.length*4-source.sigBytes)/4);
